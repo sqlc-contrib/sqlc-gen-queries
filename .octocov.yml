@@ -1,0 +1,17 @@
+coverage:
+  paths:
+    - coverage.out
+  badge:
+    path: .github/coverage.svg
+comment:
+  if: is_pull_request
+  hideFooterLink: false
+diff:
+  datastores:
+    - artifact://.octocov
+codeToTestRatio:
+  code:
+    - "**/*.go"
+    - "!**/*_test.go"
+  test:
+    - "**/*_test.go"
