@@ -8,6 +8,7 @@ tool (
 )
 
 require (
+	github.com/go-openapi/inflect v0.21.3
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/urfave/cli/v3 v3.6.1

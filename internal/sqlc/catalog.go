@@ -5,8 +5,12 @@
 package sqlc
 
 import (
+	"cmp"
 	"encoding/json"
+	"fmt"
 	"os"
+	"slices"
+	"strings"
 )
 
 // Catalog represents the root structure of a sqlc catalog file.
@@ -35,7 +39,8 @@ func LoadCatalog(path string) (*Catalog, error) {
 type Schema struct {
 	Name   string  `json:"name"`
 	Tables []Table `json:"tables,omitempty"`
-	Attrs
+	// Inherit common attributes
+	Attributes
 }
 
 // Table represents a database table with its columns, indexes, and constraints.
@@ -45,7 +50,60 @@ type Table struct {
 	Indexes     []Index      `json:"indexes,omitempty"`
 	PrimaryKey  *Index       `json:"primary_key,omitempty"`
 	ForeignKeys []ForeignKey `json:"foreign_keys,omitempty"`
-	Attrs
+	// Inherit common attributes
+	Attributes
+}
+
+// GetColumn retrieves a column by name from the table.
+func (x *Table) GetColumn(name string) *Column {
+	for _, column := range x.Columns {
+		if column.Name == name {
+			return &column
+		}
+	}
+
+	return nil
+}
+
+// GetNonUniqueIndexes retrieves all non-unique indexes from the table.
+func (x *Table) GetNonUniqueIndexes() []*Index {
+	var keys []*Index
+
+	for _, index := range x.Indexes {
+		if index.HasExpr() {
+			continue
+		}
+
+		if !index.Unique {
+			index.Name = cmp.Or(index.Name, "non-unique key")
+			keys = append(keys, &index)
+		}
+	}
+
+	return keys
+}
+
+// GetUniqueKeys retrieves all unique keys (primary key and unique indexes) from the table.
+func (x *Table) GetUniqueKeys() []*Index {
+	var keys []*Index
+
+	if x.PrimaryKey != nil {
+		x.PrimaryKey.Name = cmp.Or(x.PrimaryKey.Name, "primary key")
+		keys = append(keys, x.PrimaryKey)
+	}
+
+	for _, index := range x.Indexes {
+		if index.HasExpr() {
+			continue
+		}
+
+		if index.Unique {
+			index.Name = cmp.Or(index.Name, "unique key")
+			keys = append(keys, &index)
+		}
+	}
+
+	return keys
 }
 
 // Column represents a table column with its name, data type, and nullability.
@@ -53,7 +111,8 @@ type Column struct {
 	Name string `json:"name"`
 	Type string `json:"type,omitempty"`
 	Null bool   `json:"null,omitempty"`
-	Attrs
+	// Inherit common attributes
+	Attributes
 }
 
 // Index represents a database index on one or more columns or expressions.
@@ -61,6 +120,13 @@ type Index struct {
 	Name   string      `json:"name,omitempty"`
 	Unique bool        `json:"unique,omitempty"`
 	Parts  []IndexPart `json:"parts,omitempty"`
+}
+
+// HasExpr checks if the index contains any expression-based parts.
+func (x *Index) HasExpr() bool {
+	return slices.ContainsFunc(x.Parts, func(x IndexPart) bool {
+		return x.Expr != ""
+	})
 }
 
 // IndexPart represents a single part of an index, which can be either a column or an expression.
@@ -81,9 +147,68 @@ type ForeignKey struct {
 	} `json:"references"`
 }
 
-// Attrs represents common attributes that can be applied to schemas, tables, and columns.
+// Condition represents a simple equality condition between a column and an argument.
+type Condition struct {
+	Column   *Column
+	Argument *Argument
+}
+
+// String returns the string representation of the Condition for use in SQL queries.
+func (x *Condition) String() string {
+	return fmt.Sprintf("%s = %v", x.Column.Name, x.Argument)
+}
+
+// CompositeCondition represents a combination of multiple conditions using a logical operator (e.g., AND, OR).
+type CompositeCondition struct {
+	Operator   string
+	Conditions []fmt.Stringer
+}
+
+// AddColumn adds a new condition for the specified column to the CompositeCondition.
+func (x *CompositeCondition) AddColumn(column *Column) {
+	x.Conditions = append(x.Conditions,
+		&Condition{
+			Column: column,
+			Argument: &Argument{
+				Column: column,
+			},
+		},
+	)
+}
+
+// String returns the string representation of the CompositeCondition for use in SQL queries.
+func (x *CompositeCondition) String() string {
+	var items []string
+
+	for _, condition := range x.Conditions {
+		if expression := condition.String(); expression != "" {
+			items = append(items, expression)
+		}
+	}
+
+	if len(items) == 0 {
+		return ""
+	}
+
+	return strings.Join(items, fmt.Sprintf(" %s ", x.Operator))
+}
+
+// Argument represents SQL argument corresponding to a column.
+type Argument struct {
+	Column *Column `json:"column"`
+}
+
+// String returns the string representation of the Argument for use in SQL queries.
+func (x *Argument) String() string {
+	if x.Column.Null {
+		return fmt.Sprintf("sqlc.narg(%s)", x.Column.Name)
+	}
+	return fmt.Sprintf("sqlc.arg(%s)", x.Column.Name)
+}
+
+// Attributes represents common attributes that can be applied to schemas, tables, and columns.
 // These are typically dialect-specific metadata.
-type Attrs struct {
+type Attributes struct {
 	Comment string `json:"comment,omitempty"`
 	Charset string `json:"charset,omitempty"`
 	Collate string `json:"collate,omitempty"`

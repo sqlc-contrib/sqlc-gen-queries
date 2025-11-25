@@ -99,4 +99,213 @@ var _ = Describe("Catalog", func() {
 			})
 		})
 	})
+
+	Describe("Table methods", func() {
+		var catalog *sqlc.Catalog
+		var usersTable *sqlc.Table
+
+		BeforeEach(func() {
+			var err error
+			catalog, err = sqlc.LoadCatalog("./catalog_test.json")
+			Expect(err).NotTo(HaveOccurred())
+			usersTable = &catalog.Schemas[0].Tables[0]
+		})
+
+		Describe("GetColumn", func() {
+			It("returns the column when it exists", func() {
+				column := usersTable.GetColumn("email")
+				Expect(column).NotTo(BeNil())
+				Expect(column.Name).To(Equal("email"))
+				Expect(column.Type).To(Equal("varchar(255)"))
+			})
+
+			It("returns nil when the column does not exist", func() {
+				column := usersTable.GetColumn("nonexistent")
+				Expect(column).To(BeNil())
+			})
+		})
+
+		Describe("GetNonUniqueIndexes", func() {
+			var postsTable *sqlc.Table
+
+			BeforeEach(func() {
+				postsTable = &catalog.Schemas[0].Tables[1]
+			})
+
+			It("returns non-unique indexes", func() {
+				keys := postsTable.GetNonUniqueIndexes()
+				Expect(keys).To(HaveLen(1))
+				Expect(keys[0].Name).To(Equal("idx_posts_user_id"))
+				Expect(keys[0].Unique).To(BeFalse())
+			})
+
+			It("returns empty slice when there are no non-unique indexes", func() {
+				keys := usersTable.GetNonUniqueIndexes()
+				Expect(keys).To(BeEmpty())
+			})
+		})
+
+		Describe("GetUniqueKeys", func() {
+			It("returns primary key and unique indexes", func() {
+				keys := usersTable.GetUniqueKeys()
+				Expect(keys).To(HaveLen(2))
+
+				// First should be primary key
+				Expect(keys[0].Name).To(Equal("users_pkey"))
+				Expect(keys[0].Unique).To(BeTrue())
+
+				// Second should be unique index
+				Expect(keys[1].Name).To(Equal("idx_users_email"))
+				Expect(keys[1].Unique).To(BeTrue())
+			})
+
+			It("returns only indexes when there is no primary key", func() {
+				// Create a table without primary key
+				table := &sqlc.Table{
+					Name: "test_table",
+					Indexes: []sqlc.Index{
+						{Name: "idx_unique", Unique: true},
+						{Name: "idx_normal", Unique: false},
+					},
+				}
+
+				keys := table.GetUniqueKeys()
+				Expect(keys).To(HaveLen(1))
+				Expect(keys[0].Name).To(Equal("idx_unique"))
+			})
+		})
+	})
+
+	Describe("Condition", func() {
+		It("generates correct SQL condition string", func() {
+			column := &sqlc.Column{
+				Name: "user_id",
+				Type: "integer",
+				Null: false,
+			}
+
+			arg := &sqlc.Argument{
+				Column: column,
+			}
+
+			condition := &sqlc.Condition{
+				Column:   column,
+				Argument: arg,
+			}
+
+			Expect(condition.String()).To(Equal("user_id = sqlc.arg(user_id)"))
+		})
+	})
+
+	Describe("Argument", func() {
+		Context("when column is nullable", func() {
+			It("uses sqlc.narg", func() {
+				column := &sqlc.Column{
+					Name: "description",
+					Type: "text",
+					Null: true,
+				}
+
+				arg := &sqlc.Argument{
+					Column: column,
+				}
+
+				Expect(arg.String()).To(Equal("sqlc.narg(description)"))
+			})
+		})
+
+		Context("when column is not nullable", func() {
+			It("uses sqlc.arg", func() {
+				column := &sqlc.Column{
+					Name: "id",
+					Type: "integer",
+					Null: false,
+				}
+
+				arg := &sqlc.Argument{
+					Column: column,
+				}
+
+				Expect(arg.String()).To(Equal("sqlc.arg(id)"))
+			})
+		})
+	})
+
+	Describe("CompositeCondition", func() {
+		Describe("AddColumn", func() {
+			It("adds a condition for the column", func() {
+				composite := &sqlc.CompositeCondition{
+					Operator: "AND",
+				}
+
+				column := &sqlc.Column{
+					Name: "id",
+					Type: "integer",
+					Null: false,
+				}
+
+				composite.AddColumn(column)
+
+				Expect(composite.Conditions).To(HaveLen(1))
+			})
+		})
+
+		Describe("String", func() {
+			It("joins conditions with the operator", func() {
+				column1 := &sqlc.Column{
+					Name: "id",
+					Type: "integer",
+					Null: false,
+				}
+
+				column2 := &sqlc.Column{
+					Name: "email",
+					Type: "text",
+					Null: false,
+				}
+
+				composite := &sqlc.CompositeCondition{
+					Operator: "AND",
+				}
+
+				composite.AddColumn(column1)
+				composite.AddColumn(column2)
+
+				result := composite.String()
+				Expect(result).To(Equal("id = sqlc.arg(id) AND email = sqlc.arg(email)"))
+			})
+
+			It("returns empty string when there are no conditions", func() {
+				composite := &sqlc.CompositeCondition{
+					Operator: "AND",
+				}
+
+				Expect(composite.String()).To(BeEmpty())
+			})
+
+			It("handles OR operator", func() {
+				column1 := &sqlc.Column{
+					Name: "id",
+					Type: "integer",
+					Null: false,
+				}
+
+				column2 := &sqlc.Column{
+					Name: "email",
+					Type: "text",
+					Null: false,
+				}
+
+				composite := &sqlc.CompositeCondition{
+					Operator: "OR",
+				}
+
+				composite.AddColumn(column1)
+				composite.AddColumn(column2)
+
+				result := composite.String()
+				Expect(result).To(Equal("id = sqlc.arg(id) OR email = sqlc.arg(email)"))
+			})
+		})
+	})
 })
