@@ -1,17 +1,16 @@
 coverage:
-  paths:
-    - coverage.out
   badge:
     path: .github/coverage.svg
+  paths:
+    - coverage.out
+  acceptable: 0%
 comment:
   if: is_pull_request
-  hideFooterLink: false
-diff:
-  datastores:
-    - artifact://.octocov
-codeToTestRatio:
-  code:
-    - "**/*.go"
-    - "!**/*_test.go"
-  test:
-    - "**/*_test.go"
+  deletePrevious: true
+summary:
+  if: true
+report:
+  if: is_default_branch
+push:
+  if: is_default_branch
+  message: Update by octocov [skip ci]
