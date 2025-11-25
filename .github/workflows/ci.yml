@@ -11,8 +11,7 @@ permissions:
   pull-requests: write
   checks: write
 jobs:
-  test:
-    name: Test
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -25,51 +24,15 @@ jobs:
       - name: Download dependencies
         run: go mod download
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-      - name: Upload coverage to artifacts
-        uses: actions/upload-artifact@v5
-        with:
-          name: coverage
-          path: coverage.out
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Download coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage
+        run: go tool ginkgo run -coverprofile=coverage.out -covermode=atomic ./...
       - name: Run octocov
         uses: k1LoW/octocov-action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-  release-please:
-    name: Release Please
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test, lint]
-    steps:
       - name: Run release-please
         uses: googleapis/release-please-action@v4
         with:
