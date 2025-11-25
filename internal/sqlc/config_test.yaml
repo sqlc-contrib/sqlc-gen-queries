@@ -1,0 +1,5 @@
+version: "2"
+sql:
+  - schema: "schema/migration"
+    queries: "ent/query"
+    engine: "postgresql"

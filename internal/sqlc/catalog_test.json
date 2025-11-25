@@ -1,0 +1,128 @@
+{
+  "schemas": [
+    {
+      "name": "public",
+      "comment": "Public schema",
+      "tables": [
+        {
+          "name": "users",
+          "comment": "User accounts",
+          "columns": [
+            {
+              "name": "id",
+              "type": "integer",
+              "null": false,
+              "comment": "Primary key"
+            },
+            {
+              "name": "email",
+              "type": "varchar(255)",
+              "null": false,
+              "comment": "User email address"
+            },
+            {
+              "name": "name",
+              "type": "text",
+              "null": true
+            }
+          ],
+          "primary_key": {
+            "name": "users_pkey",
+            "unique": true,
+            "parts": [
+              {
+                "column": "id",
+                "desc": false
+              }
+            ]
+          },
+          "indexes": [
+            {
+              "name": "idx_users_email",
+              "unique": true,
+              "parts": [
+                {
+                  "column": "email",
+                  "desc": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "posts",
+          "columns": [
+            {
+              "name": "id",
+              "type": "integer",
+              "null": false
+            },
+            {
+              "name": "user_id",
+              "type": "integer",
+              "null": false
+            },
+            {
+              "name": "title",
+              "type": "text",
+              "null": false
+            },
+            {
+              "name": "content",
+              "type": "text",
+              "null": true
+            }
+          ],
+          "primary_key": {
+            "name": "posts_pkey",
+            "unique": true,
+            "parts": [
+              {
+                "column": "id"
+              }
+            ]
+          },
+          "foreign_keys": [
+            {
+              "name": "fk_posts_user_id",
+              "columns": [
+                "user_id"
+              ],
+              "references": {
+                "table": "users",
+                "columns": [
+                  "id"
+                ]
+              }
+            }
+          ],
+          "indexes": [
+            {
+              "name": "idx_posts_user_id",
+              "unique": false,
+              "parts": [
+                {
+                  "column": "user_id"
+                }
+              ]
+            },
+            {
+              "name": "idx_posts_title_expr",
+              "unique": false,
+              "parts": [
+                {
+                  "expr": "lower(title)",
+                  "desc": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "analytics",
+      "tables": []
+    }
+  ]
+}

@@ -24,5 +24,7 @@ var _ = BeforeSuite(func() {
 		Expect(path).NotTo(BeEmpty())
 		// prepare the command
 		command = exec.Command(path)
+		command.Env = append(command.Env, "SQLC_CONFIG_FILE=../internal/sqlc/config_test.yaml")
+		command.Env = append(command.Env, "SQLC_CATALOG_FILE=../internal/sqlc/catalog_test.json")
 	})
 })
