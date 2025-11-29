@@ -119,6 +119,30 @@ func (x *Table) GetUniqueKeys() []*Index {
 	return keys
 }
 
+// GetNonPrimaryKeyColumns retrieves all columns from the table except the primary key columns.
+// This is useful for generating UPDATE statements where primary keys should not be modified.
+func (x *Table) GetNonPrimaryKeyColumns() []Column {
+	var columns []Column
+
+	// Get primary key column names for exclusion
+	var pkColumns map[string]bool
+	if x.PrimaryKey != nil {
+		pkColumns = make(map[string]bool)
+		for _, part := range x.PrimaryKey.Parts {
+			pkColumns[part.Column] = true
+		}
+	}
+
+	// Add all non-primary key columns
+	for _, column := range x.Columns {
+		if pkColumns == nil || !pkColumns[column.Name] {
+			columns = append(columns, column)
+		}
+	}
+
+	return columns
+}
+
 // Column represents a table column with its name, data type, and nullability.
 type Column struct {
 	Name string `json:"name"`

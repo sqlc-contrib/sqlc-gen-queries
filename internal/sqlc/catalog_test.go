@@ -316,5 +316,165 @@ var _ = Describe("Catalog", func() {
 				Expect(result).To(Equal("id = sqlc.arg(id) OR email = sqlc.arg(email)"))
 			})
 		})
+
+		Describe("GetNonPrimaryKeyColumns", func() {
+			It("excludes primary key columns", func() {
+				catalog, err := sqlc.LoadCatalog("./catalog_test.json")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(catalog).NotTo(BeNil())
+				usersTable := &catalog.Schemas[0].Tables[0]
+				nonPKColumns := usersTable.GetNonPrimaryKeyColumns()
+
+				// Should have 2 columns (email, name) but not id
+				Expect(nonPKColumns).To(HaveLen(2))
+
+				columnNames := make([]string, len(nonPKColumns))
+				for i, col := range nonPKColumns {
+					columnNames[i] = col.Name
+				}
+
+				Expect(columnNames).To(ConsistOf("email", "name"))
+				Expect(columnNames).NotTo(ContainElement("id"))
+			})
+
+			It("returns all columns when table has no primary key", func() {
+				tableWithoutPK := &sqlc.Table{
+					Name: "test_table",
+					Columns: []sqlc.Column{
+						{Name: "id", Type: "integer"},
+						{Name: "name", Type: "text"},
+						{Name: "email", Type: "varchar(255)"},
+					},
+				}
+
+				nonPKColumns := tableWithoutPK.GetNonPrimaryKeyColumns()
+				Expect(nonPKColumns).To(HaveLen(3))
+
+				columnNames := make([]string, len(nonPKColumns))
+				for i, col := range nonPKColumns {
+					columnNames[i] = col.Name
+				}
+
+				Expect(columnNames).To(ConsistOf("id", "name", "email"))
+			})
+
+			It("handles composite primary keys", func() {
+				tableWithCompositePK := &sqlc.Table{
+					Name: "junction_table",
+					Columns: []sqlc.Column{
+						{Name: "user_id", Type: "integer"},
+						{Name: "role_id", Type: "integer"},
+						{Name: "created_at", Type: "timestamp"},
+						{Name: "updated_at", Type: "timestamp"},
+					},
+					PrimaryKey: &sqlc.Index{
+						Name: "junction_pkey",
+						Parts: []sqlc.IndexPart{
+							{Column: "user_id"},
+							{Column: "role_id"},
+						},
+					},
+				}
+
+				nonPKColumns := tableWithCompositePK.GetNonPrimaryKeyColumns()
+				Expect(nonPKColumns).To(HaveLen(2))
+
+				columnNames := make([]string, len(nonPKColumns))
+				for i, col := range nonPKColumns {
+					columnNames[i] = col.Name
+				}
+
+				Expect(columnNames).To(ConsistOf("created_at", "updated_at"))
+				Expect(columnNames).NotTo(ContainElement("user_id"))
+				Expect(columnNames).NotTo(ContainElement("role_id"))
+			})
+
+			It("returns empty slice for table with only primary key", func() {
+				tableWithOnlyPK := &sqlc.Table{
+					Name: "simple_table",
+					Columns: []sqlc.Column{
+						{Name: "id", Type: "integer"},
+					},
+					PrimaryKey: &sqlc.Index{
+						Name: "simple_pkey",
+						Parts: []sqlc.IndexPart{
+							{Column: "id"},
+						},
+					},
+				}
+
+				nonPKColumns := tableWithOnlyPK.GetNonPrimaryKeyColumns()
+				Expect(nonPKColumns).To(BeEmpty())
+			})
+
+			It("preserves column order", func() {
+				tableWithOrderedColumns := &sqlc.Table{
+					Name: "ordered_table",
+					Columns: []sqlc.Column{
+						{Name: "id", Type: "integer"},
+						{Name: "name", Type: "text"},
+						{Name: "email", Type: "varchar(255)"},
+						{Name: "created_at", Type: "timestamp"},
+						{Name: "updated_at", Type: "timestamp"},
+					},
+					PrimaryKey: &sqlc.Index{
+						Name: "ordered_pkey",
+						Parts: []sqlc.IndexPart{
+							{Column: "id"},
+						},
+					},
+				}
+
+				nonPKColumns := tableWithOrderedColumns.GetNonPrimaryKeyColumns()
+				Expect(nonPKColumns).To(HaveLen(4))
+
+				// Verify order is preserved (excluding id)
+				Expect(nonPKColumns[0].Name).To(Equal("name"))
+				Expect(nonPKColumns[1].Name).To(Equal("email"))
+				Expect(nonPKColumns[2].Name).To(Equal("created_at"))
+				Expect(nonPKColumns[3].Name).To(Equal("updated_at"))
+			})
+
+			It("handles table with no columns", func() {
+				emptyTable := &sqlc.Table{
+					Name:    "empty_table",
+					Columns: []sqlc.Column{},
+				}
+
+				nonPKColumns := emptyTable.GetNonPrimaryKeyColumns()
+				Expect(nonPKColumns).To(BeEmpty())
+			})
+
+			It("handles table with nullable and non-nullable columns", func() {
+				tableWithMixedColumns := &sqlc.Table{
+					Name: "mixed_table",
+					Columns: []sqlc.Column{
+						{Name: "id", Type: "integer", Null: false},
+						{Name: "name", Type: "text", Null: true},
+						{Name: "email", Type: "varchar(255)", Null: false},
+						{Name: "description", Type: "text", Null: true},
+					},
+					PrimaryKey: &sqlc.Index{
+						Name: "mixed_pkey",
+						Parts: []sqlc.IndexPart{
+							{Column: "id"},
+						},
+					},
+				}
+
+				nonPKColumns := tableWithMixedColumns.GetNonPrimaryKeyColumns()
+				Expect(nonPKColumns).To(HaveLen(3))
+
+				// Verify column properties are preserved
+				Expect(nonPKColumns[0].Name).To(Equal("name"))
+				Expect(nonPKColumns[0].Null).To(BeTrue())
+
+				Expect(nonPKColumns[1].Name).To(Equal("email"))
+				Expect(nonPKColumns[1].Null).To(BeFalse())
+
+				Expect(nonPKColumns[2].Name).To(Equal("description"))
+				Expect(nonPKColumns[2].Null).To(BeTrue())
+			})
+		})
 	})
 })

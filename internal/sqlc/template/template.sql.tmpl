@@ -63,7 +63,7 @@ WHERE
 -- name: Update{{table_name $.Table.Name "one"}}{{query_index $key}} :one
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
             THEN {{query_argument $column}}
@@ -79,7 +79,7 @@ RETURNING *;
 -- name: ExecUpdate{{table_name $.Table.Name "one"}}{{query_index $key}} :exec
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
             THEN {{query_argument $column}}
@@ -94,7 +94,7 @@ WHERE
 -- name: BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchone
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
             THEN {{query_argument $column}}
@@ -110,7 +110,7 @@ RETURNING *;
 -- name: BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
             THEN {{query_argument $column}}
