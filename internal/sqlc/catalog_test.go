@@ -202,7 +202,7 @@ var _ = Describe("Catalog", func() {
 				Argument: arg,
 			}
 
-			Expect(condition.String()).To(Equal("user_id = sqlc.arg(user_id)::integer"))
+			Expect(condition.String()).To(Equal("user_id = sqlc.arg(user_id)"))
 		})
 	})
 
@@ -219,7 +219,7 @@ var _ = Describe("Catalog", func() {
 					Column: column,
 				}
 
-				Expect(arg.String()).To(Equal("sqlc.narg(description)::text"))
+				Expect(arg.String()).To(Equal("sqlc.narg(description)"))
 			})
 		})
 
@@ -235,7 +235,7 @@ var _ = Describe("Catalog", func() {
 					Column: column,
 				}
 
-				Expect(arg.String()).To(Equal("sqlc.arg(id)::integer"))
+				Expect(arg.String()).To(Equal("sqlc.arg(id)"))
 			})
 		})
 	})
@@ -281,7 +281,7 @@ var _ = Describe("Catalog", func() {
 				composite.AddColumn(column2)
 
 				result := composite.String()
-				Expect(result).To(Equal("id = sqlc.arg(id)::integer AND email = sqlc.arg(email)::text"))
+				Expect(result).To(Equal("id = sqlc.arg(id) AND email = sqlc.arg(email)"))
 			})
 
 			It("returns empty string when there are no conditions", func() {
@@ -313,7 +313,7 @@ var _ = Describe("Catalog", func() {
 				composite.AddColumn(column2)
 
 				result := composite.String()
-				Expect(result).To(Equal("id = sqlc.arg(id)::integer OR email = sqlc.arg(email)::text"))
+				Expect(result).To(Equal("id = sqlc.arg(id) OR email = sqlc.arg(email)"))
 			})
 		})
 	})

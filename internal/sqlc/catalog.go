@@ -248,9 +248,9 @@ type Argument struct {
 func (x *Argument) String() string {
 	// Prepare the argument string based on nullability
 	if x.Column.Null {
-		return fmt.Sprintf("sqlc.narg(%s)::%s", x.Column.Name, x.Column.Type)
+		return fmt.Sprintf("sqlc.narg(%s)", x.Column.Name)
 	}
-	return fmt.Sprintf("sqlc.arg(%s)::%s", x.Column.Name, x.Column.Type)
+	return fmt.Sprintf("sqlc.arg(%s)", x.Column.Name)
 }
 
 // Attributes represents common attributes that can be applied to schemas, tables, and columns.
