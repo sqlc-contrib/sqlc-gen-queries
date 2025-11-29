@@ -9,5 +9,5 @@ import (
 
 func TestTemplate(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Template Suite")
+	RunSpecs(t, "SQLC Template Suite")
 }

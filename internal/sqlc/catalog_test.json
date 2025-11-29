@@ -71,6 +71,12 @@
               "name": "content",
               "type": "text",
               "null": true
+            },
+            {
+              "name": "author_id",
+              "type": "integer",
+              "null": true,
+              "comment": "Optional author reference for testing LEFT JOIN"
             }
           ],
           "primary_key": {
@@ -87,6 +93,18 @@
               "name": "fk_posts_user_id",
               "columns": [
                 "user_id"
+              ],
+              "references": {
+                "table": "users",
+                "columns": [
+                  "id"
+                ]
+              }
+            },
+            {
+              "name": "fk_posts_author_id",
+              "columns": [
+                "author_id"
               ],
               "references": {
                 "table": "users",

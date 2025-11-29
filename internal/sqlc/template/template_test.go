@@ -12,13 +12,18 @@ import (
 var _ = Describe("Template", func() {
 	Describe("Open", func() {
 		opts := map[string]any{
-			"where":    func(args ...any) string { return "" },
-			"arg":      func(args ...any) string { return "" },
-			"by_one":   func(args ...any) string { return "" },
-			"by_many":  func(args ...any) string { return "" },
-			"by_index": func(args ...any) string { return "" },
-			"cursor":   func(args ...any) string { return "" },
-			"order":    func(args ...any) string { return "" },
+			// Table Functions
+			"table_ref":   func(args ...any) string { return "" },
+			"table_name":  func(args ...any) string { return "" },
+			"table_join":  func(args ...any) string { return "" },
+			"table_embed": func(args ...any) string { return "" },
+			// Query Functions
+			"query_condition": func(args ...any) string { return "" },
+			"query_argument":  func(args ...any) string { return "" },
+			"query_index":     func(args ...any) string { return "" },
+			// Pagination Functions
+			"page_start": func(args ...any) string { return "" },
+			"page_order": func(args ...any) string { return "" },
 		}
 
 		It("opens and parses template successfully", func() {

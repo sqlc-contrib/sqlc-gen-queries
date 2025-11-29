@@ -4,9 +4,9 @@
 
 SET search_path TO {{.Schema}};
 
-{{range $idx, $key := .Table.GetUniqueKeys}}-- Get{{by_one $.Table}}{{by_index $.Table $key}} retrieves a single row from '{{$.Table.Name}}' by {{$key.Name}}.
+{{range $idx, $key := .Table.GetUniqueKeys}}-- Get{{table_name $.Table.Name "one"}}{{query_index $key}} retrieves a single row from '{{$.Table.Name}}' by {{$key.Name}}.
 -- Returns the row or an error if not found.
--- name: Get{{by_one $.Table}}{{by_index $.Table $key}} :one
+-- name: Get{{table_name $.Table.Name "one"}}{{query_index $key}} :one
 SELECT
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
@@ -14,11 +14,26 @@ SELECT
 FROM
     {{$.Table.Name}}
 WHERE
-    {{where $.Table $key}};
+    {{query_condition $.Table $key}};
+{{- if eq $key $.Table.PrimaryKey}}
+{{- range $fk := $.Table.ForeignKeys}}
 
--- BatchGet{{by_many $.Table}}{{by_index $.Table $key}} retrieves multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
+-- Get{{table_name $.Table.Name "one"}}{{query_index $key}}With{{table_name (table_ref $fk) "one"}} retrieves a row from '{{$.Table.Name}}' by its primary key with its related '{{$fk.References.Table}}' record.
+-- The result is a struct with both tables table_embedded.
+-- name: Get{{table_name $.Table.Name "one"}}{{query_index $key}}With{{table_name (table_ref $fk) "one"}} :one
+SELECT
+    {{table_embed $.Table.Name}}, {{table_embed $fk.References.Table}}
+FROM
+    {{$.Table.Name}}
+{{table_join $.Table $fk}}
+WHERE
+    {{query_condition $.Table $key}};
+{{- end}}
+{{- end}}
+
+-- BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}} retrieves multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Executes the query once for each provided key value and returns individual results.
--- name: BatchGet{{by_many $.Table}}{{by_index $.Table $key}} :batchone
+-- name: BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}} :batchone
 SELECT
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
@@ -26,169 +41,184 @@ SELECT
 FROM
     {{$.Table.Name}}
 WHERE
-    {{where $.Table $key}};
+    {{query_condition $.Table $key}};
+{{- if eq $key $.Table.PrimaryKey}}
+{{- range $fk := $.Table.ForeignKeys}}
 
--- Update{{by_one $.Table}}{{by_index $.Table $key}} updates a row in '{{$.Table.Name}}' identified by {{$key.Name}}.
+-- BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}}With{{table_name (table_ref $fk) "one"}} retrieves rows from '{{$.Table.Name}}' by primary key with their related '{{$fk.References.Table}}' records.
+-- The result is a struct with both tables table_embedded for each row.
+-- name: BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}}With{{table_name (table_ref $fk) "one"}} :batchone
+SELECT
+    {{table_embed $.Table.Name}}, {{table_embed $fk.References.Table}}
+FROM
+    {{$.Table.Name}}
+{{table_join $.Table $fk}}
+WHERE
+    {{query_condition $.Table $key}};
+{{- end}}
+{{- end}}
+
+-- Update{{table_name $.Table.Name "one"}}{{query_index $key}} updates a row in '{{$.Table.Name}}' identified by {{$key.Name}}.
 -- Uses update_mask to specify which fields to update. Returns the updated row.
--- name: Update{{by_one $.Table}}{{by_index $.Table $key}} :one
+-- name: Update{{table_name $.Table.Name "one"}}{{query_index $key}} :one
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
-            THEN {{arg $column}}
+            THEN {{query_argument $column}}
         ELSE {{$column.Name}}
     END
 {{- end}}
 WHERE
-    {{where $.Table $key}}
+    {{query_condition $.Table $key}}
 RETURNING *;
 
--- ExecUpdate{{by_one $.Table}}{{by_index $.Table $key}} updates a row in '{{$.Table.Name}}' identified by {{$key.Name}}.
+-- ExecUpdate{{table_name $.Table.Name "one"}}{{query_index $key}} updates a row in '{{$.Table.Name}}' identified by {{$key.Name}}.
 -- Uses update_mask to specify which fields to update. Returns number of affected rows.
--- name: ExecUpdate{{by_one $.Table}}{{by_index $.Table $key}} :exec
+-- name: ExecUpdate{{table_name $.Table.Name "one"}}{{query_index $key}} :exec
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
-            THEN {{arg $column}}
+            THEN {{query_argument $column}}
         ELSE {{$column.Name}}
     END
 {{- end}}
 WHERE
-    {{where $.Table $key}};
+    {{query_condition $.Table $key}};
 
--- BatchUpdate{{by_many $.Table}}{{by_index $.Table $key}} updates multiple rows in '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
+-- BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Uses update_mask for each row to specify which fields to update. Returns updated rows.
--- name: BatchUpdate{{by_many $.Table}}{{by_index $.Table $key}} :batchone
+-- name: BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchone
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
-            THEN {{arg $column}}
+            THEN {{query_argument $column}}
         ELSE {{$column.Name}}
     END
 {{- end}}
 WHERE
-    {{where $.Table $key}}
+    {{query_condition $.Table $key}}
 RETURNING *;
 
--- BatchExecUpdate{{by_many $.Table}}{{by_index $.Table $key}} updates multiple rows in '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
+-- BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Uses update_mask for each row to specify which fields to update. Returns number of affected rows.
--- name: BatchExecUpdate{{by_many $.Table}}{{by_index $.Table $key}} :batchexec
+-- name: BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
-            THEN {{arg $column}}
+            THEN {{query_argument $column}}
         ELSE {{$column.Name}}
     END
 {{- end}}
 WHERE
-    {{where $.Table $key}};
+    {{query_condition $.Table $key}};
 
--- Delete{{by_one $.Table}}{{by_index $.Table $key}} deletes a single row from '{{$.Table.Name}}' by {{$key.Name}}.
+-- Delete{{table_name $.Table.Name "one"}}{{query_index $key}} deletes a single row from '{{$.Table.Name}}' by {{$key.Name}}.
 -- Returns the deleted row or an error if not found.
--- name: Delete{{by_one $.Table}}{{by_index $.Table $key}} :one
+-- name: Delete{{table_name $.Table.Name "one"}}{{query_index $key}} :one
 DELETE FROM {{$.Table.Name}}
 WHERE
-    {{where $.Table $key}}
+    {{query_condition $.Table $key}}
 RETURNING *;
 
--- ExecDelete{{by_one $.Table}}{{by_index $.Table $key}} deletes a single row from '{{$.Table.Name}}' by {{$key.Name}}.
+-- ExecDelete{{table_name $.Table.Name "one"}}{{query_index $key}} deletes a single row from '{{$.Table.Name}}' by {{$key.Name}}.
 -- Returns number of affected rows (0 if not found, 1 if deleted).
--- name: ExecDelete{{by_one $.Table}}{{by_index $.Table $key}} :exec
+-- name: ExecDelete{{table_name $.Table.Name "one"}}{{query_index $key}} :exec
 DELETE FROM {{$.Table.Name}}
 WHERE
-    {{where $.Table $key}};
+    {{query_condition $.Table $key}};
 
--- BatchDelete{{by_many $.Table}}{{by_index $.Table $key}} deletes multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
+-- BatchDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Executes the delete once for each provided key value and returns deleted rows.
--- name: BatchDelete{{by_many $.Table}}{{by_index $.Table $key}} :batchone
+-- name: BatchDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :batchone
 DELETE FROM {{$.Table.Name}}
 WHERE
-    {{where $.Table $key}}
+    {{query_condition $.Table $key}}
 RETURNING *;
 
--- BatchExecDelete{{by_many $.Table}}{{by_index $.Table $key}} deletes multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
+-- BatchExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Executes the delete once for each provided key value and returns number of affected rows.
--- name: BatchExecDelete{{by_many $.Table}}{{by_index $.Table $key}} :batchexec
+-- name: BatchExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
 DELETE FROM {{$.Table.Name}}
 WHERE
-    {{where $.Table $key}};
+    {{query_condition $.Table $key}};
 
 {{end}}
--- Insert{{by_one .Table}} inserts a new row into '{{.Table.Name}}'.
+-- Insert{{table_name .Table.Name "one"}} inserts a new row into '{{.Table.Name}}'.
 -- Returns the inserted row with all fields populated.
--- name: Insert{{by_one .Table}} :one
+-- name: Insert{{table_name .Table.Name "one"}} :one
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
-{{end}}    {{arg $column}}
+{{end}}    {{query_argument $column}}
 {{- end}}
 )
 RETURNING *;
 
--- ExecInsert{{by_one .Table}} inserts a new row into '{{.Table.Name}}'.
+-- ExecInsert{{table_name .Table.Name "one"}} inserts a new row into '{{.Table.Name}}'.
 -- Returns number of affected rows (should always be 1 on success).
--- name: ExecInsert{{by_one .Table}} :exec
+-- name: ExecInsert{{table_name .Table.Name "one"}} :exec
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
-{{end}}    {{arg $column}}
+{{end}}    {{query_argument $column}}
 {{- end}}
 );
 
--- BatchInsert{{by_many .Table}} inserts multiple rows into '{{.Table.Name}}' in a single batch operation.
+-- BatchInsert{{table_name .Table.Name "many"}} inserts multiple rows into '{{.Table.Name}}' in a single batch operation.
 -- Executes the insert once for each provided set of values and returns inserted rows.
--- name: BatchInsert{{by_many .Table}} :batchone
+-- name: BatchInsert{{table_name .Table.Name "many"}} :batchone
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
-{{end}}    {{arg $column}}
+{{end}}    {{query_argument $column}}
 {{- end}}
 )
 RETURNING *;
 
--- BatchExecInsert{{by_many .Table}} inserts multiple rows into '{{.Table.Name}}' in a single batch operation.
+-- BatchExecInsert{{table_name .Table.Name "many"}} inserts multiple rows into '{{.Table.Name}}' in a single batch operation.
 -- Executes the insert once for each provided set of values and returns number of affected rows.
--- name: BatchExecInsert{{by_many .Table}} :batchexec
+-- name: BatchExecInsert{{table_name .Table.Name "many"}} :batchexec
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
-{{end}}    {{arg $column}}
+{{end}}    {{query_argument $column}}
 {{- end}}
 );
 
--- Copy{{by_many .Table}} efficiently bulk inserts multiple rows into '{{.Table.Name}}' using PostgreSQL COPY protocol.
+-- Copy{{table_name .Table.Name "many"}} efficiently bulk inserts multiple rows into '{{.Table.Name}}' using PostgreSQL COPY protocol.
 -- This is the fastest way to insert large amounts of data. Does not return inserted rows.
--- name: Copy{{by_many .Table}} :copyfrom
+-- name: Copy{{table_name .Table.Name "many"}} :copyfrom
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
-{{end}}    {{arg $column}}
+{{end}}    {{query_argument $column}}
 {{- end}}
 );
 
--- List{{by_many $.Table}} retrieves a paginated list of rows from '{{$.Table.Name}}'.
+-- List{{table_name .Table.Name "many"}} retrieves a paginated list of rows from '{{$.Table.Name}}'.
 -- 
 -- Filtering:
 --   The 'filter' parameter enables dynamic WHERE clauses for flexible querying.
@@ -200,175 +230,184 @@ INSERT INTO {{.Table.Name}} (
 --   Cursor-based: Use page_start (ID of last item from previous page) + page_limit.
 --                 Returns items AFTER the cursor. Set page_start to the last item's ID from current page as next cursor.
 --   Offset-based: Use page_offset + page_limit for traditional page number pagination.
--- name: List{{by_many $.Table}} :many
+-- name: List{{table_name .Table.Name "many"}} :many
 SELECT
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 FROM
     {{$.Table.Name}}
+{{- $page_start := page_start $.Table}}
+{{- $page_order := page_order $.Table}}
 WHERE
-    COALESCE(sqlc.narg(filter)::void, TRUE)
-    AND {{cursor $.Table}}
-ORDER BY
-    {{order $.Table}}
-LIMIT
-    sqlc.narg(page_limit)::int
-OFFSET
-    sqlc.narg(page_offset)::int;
-
-{{range $idx, $key := .Table.GetNonUniqueIndexes}}-- List{{by_many $.Table}}{{by_index $.Table $key}} retrieves a paginated list of rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
--- 
--- Filtering:
---   The 'filter' parameter enables dynamic WHERE clauses for flexible querying.
---   Pass NULL for no filtering, or use a query builder (e.g., pgxmql.WhereClause) 
---   to construct runtime conditions. The void type cast allows query rewriting.
---   Example: filter can add conditions like "status = 'active' AND created_at > '2024-01-01'"
---
--- Pagination:
---   Cursor-based: Use page_start (ID of last item from previous page) + page_limit.
---                 Returns items AFTER the cursor. Set page_start to the last item's ID from current page as next cursor.
---   Offset-based: Use page_offset + page_limit for traditional page number pagination.
--- name: List{{by_many $.Table}}{{by_index $.Table $key}} :many
-SELECT
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
-{{end}}    {{$column.Name}}
-{{- end}}
-FROM
-    {{$.Table.Name}}
-{{- $where := where $.Table $key}}
-{{- $cursor := cursor $.Table}}
-{{- if $where}}
-WHERE
-    {{$where}}
-    {{- if $cursor}}
-    AND {{$cursor}}
+    sqlc.narg(filter)::void IS NULL
+    {{- if $page_start}}
+    AND {{$page_start}}
     {{- end}}
-{{- else if $cursor}}
-WHERE
-    {{$cursor}}
-{{- end}}
+{{- if $page_order}}
 ORDER BY
-    {{order $.Table}}
+    {{$page_order}}
+{{- end}}
 LIMIT
     sqlc.narg(page_limit)::int
 OFFSET
     sqlc.narg(page_offset)::int;
 
--- Update{{by_many $.Table}}{{by_index $.Table $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
+{{range $idx, $key := .Table.GetNonUniqueIndexes}}-- List{{table_name $.Table.Name "many"}}{{query_index $key}} retrieves a paginated list of rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
+-- 
+-- Filtering:
+--   The 'filter' parameter enables dynamic WHERE clauses for flexible querying.
+--   Pass NULL for no filtering, or use a query builder (e.g., pgxmql.WhereClause) 
+--   to construct runtime conditions. The void type cast allows query rewriting.
+--   Example: filter can add conditions like "status = 'active' AND created_at > '2024-01-01'"
+--
+-- Pagination:
+--   Cursor-based: Use page_start (ID of last item from previous page) + page_limit.
+--                 Returns items AFTER the cursor. Set page_start to the last item's ID from current page as next cursor.
+--   Offset-based: Use page_offset + page_limit for traditional page number pagination.
+-- name: List{{table_name $.Table.Name "many"}}{{query_index $key}} :many
+SELECT
+{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{end}}    {{$column.Name}}
+{{- end}}
+FROM
+    {{$.Table.Name}}
+{{- $condition := query_condition $.Table $key}}
+{{- $page_start := page_start $.Table}}
+{{- $page_order := page_order $.Table}}
+{{- if $condition}}
+WHERE
+    {{$condition}}
+    {{- if $page_start}}
+    AND {{$page_start}}
+    {{- end}}
+{{- else if $page_start}}
+WHERE
+    {{$page_start}}
+{{- end}}
+{{- if $page_order}}
+ORDER BY
+    {{$page_order}}
+{{- end}}
+LIMIT
+    sqlc.narg(page_limit)::int
+OFFSET
+    sqlc.narg(page_offset)::int;
+
+-- Update{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 -- Uses update_mask to specify which fields to update. Returns updated rows.
--- name: Update{{by_many $.Table}}{{by_index $.Table $key}} :many
+-- name: Update{{table_name $.Table.Name "many"}}{{query_index $key}} :many
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
-            THEN {{arg $column}}
+            THEN {{query_argument $column}}
         ELSE {{$column.Name}}
     END
 {{- end}}
-{{- $where := where $.Table $key}}
-{{- if $where}}
+{{- $condition := query_condition $.Table $key}}
+{{- if $condition}}
 WHERE
-    {{$where}}
+    {{$condition}}
 {{- end}}
 RETURNING *;
 
--- ExecUpdate{{by_many $.Table}}{{by_index $.Table $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
+-- ExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 -- Uses update_mask to specify which fields to update. Returns number of affected rows.
--- name: ExecUpdate{{by_many $.Table}}{{by_index $.Table $key}} :execrows
+-- name: ExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :execrows
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
-            THEN {{arg $column}}
+            THEN {{query_argument $column}}
         ELSE {{$column.Name}}
     END
 {{- end}}
-{{- $where := where $.Table $key}}
-{{- if $where}}
+{{- $condition := query_condition $.Table $key}}
+{{- if $condition}}
 WHERE
-    {{$where}}
+    {{$condition}}
 {{- end}};
 
--- BatchUpdate{{by_many $.Table}}{{by_index $.Table $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
+-- BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
 -- Uses update_mask for each row to specify which fields to update. Returns updated rows.
--- name: BatchUpdate{{by_many $.Table}}{{by_index $.Table $key}} :batchmany
+-- name: BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchmany
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
-            THEN {{arg $column}}
+            THEN {{query_argument $column}}
         ELSE {{$column.Name}}
     END
 {{- end}}
-{{- $where := where $.Table $key}}
-{{- if $where}}
+{{- $condition := query_condition $.Table $key}}
+{{- if $condition}}
 WHERE
-    {{$where}}
+    {{$condition}}
 {{- end}}
 RETURNING *;
 
--- BatchExecUpdate{{by_many $.Table}}{{by_index $.Table $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
+-- BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
 -- Uses update_mask for each row to specify which fields to update. Returns number of affected rows.
--- name: BatchExecUpdate{{by_many $.Table}}{{by_index $.Table $key}} :batchexec
+-- name: BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask))
-            THEN {{arg $column}}
+            THEN {{query_argument $column}}
         ELSE {{$column.Name}}
     END
 {{- end}}
-{{- $where := where $.Table $key}}
-{{- if $where}}
+{{- $condition := query_condition $.Table $key}}
+{{- if $condition}}
 WHERE
-    {{$where}}
+    {{$condition}}
 {{- end}};
 
--- Delete{{by_many $.Table}}{{by_index $.Table $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
+-- Delete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 -- Returns the deleted rows.
--- name: Delete{{by_many $.Table}}{{by_index $.Table $key}} :many
+-- name: Delete{{table_name $.Table.Name "many"}}{{query_index $key}} :many
 DELETE FROM {{$.Table.Name}}
-{{- $where := where $.Table $key}}
-{{- if $where}}
+{{- $condition := query_condition $.Table $key}}
+{{- if $condition}}
 WHERE
-    {{$where}}
+    {{$condition}}
 {{- end}}
 RETURNING *;
 
--- ExecDelete{{by_many $.Table}}{{by_index $.Table $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
+-- ExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 -- Returns number of affected rows.
--- name: ExecDelete{{by_many $.Table}}{{by_index $.Table $key}} :execrows
+-- name: ExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :execrows
 DELETE FROM {{$.Table.Name}}
-{{- $where := where $.Table $key}}
-{{- if $where}}
+{{- $condition := query_condition $.Table $key}}
+{{- if $condition}}
 WHERE
-    {{$where}}
+    {{$condition}}
 {{- end}};
 
--- BatchDelete{{by_many $.Table}}{{by_index $.Table $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
+-- BatchDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
 -- Executes the delete once for each provided key value and returns deleted rows.
--- name: BatchDelete{{by_many $.Table}}{{by_index $.Table $key}} :batchmany
+-- name: BatchDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :batchmany
 DELETE FROM {{$.Table.Name}}
-{{- $where := where $.Table $key}}
-{{- if $where}}
+{{- $condition := query_condition $.Table $key}}
+{{- if $condition}}
 WHERE
-    {{$where}}
+    {{$condition}}
 {{- end}}
 RETURNING *;
 
--- BatchExecDelete{{by_many $.Table}}{{by_index $.Table $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
+-- BatchExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
 -- Executes the delete once for each provided key value and returns number of affected rows.
--- name: BatchExecDelete{{by_many $.Table}}{{by_index $.Table $key}} :batchexec
+-- name: BatchExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
 DELETE FROM {{$.Table.Name}}
-{{- $where := where $.Table $key}}
-{{- if $where}}
+{{- $condition := query_condition $.Table $key}}
+{{- if $condition}}
 WHERE
-    {{$where}}
+    {{$condition}}
 {{- end}};
 
 {{end}}

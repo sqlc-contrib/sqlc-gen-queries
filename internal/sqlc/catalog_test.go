@@ -67,12 +67,21 @@ var _ = Describe("Catalog", func() {
 			postsTable := publicSchema.Tables[1]
 
 			// Verify foreign keys
-			Expect(postsTable.ForeignKeys).To(HaveLen(1))
+			Expect(postsTable.ForeignKeys).To(HaveLen(2))
+
+			// First FK: NOT NULL user_id (for INNER JOIN)
 			fk := postsTable.ForeignKeys[0]
 			Expect(fk.Name).To(Equal("fk_posts_user_id"))
 			Expect(fk.Columns).To(Equal([]string{"user_id"}))
 			Expect(fk.References.Table).To(Equal("users"))
 			Expect(fk.References.Columns).To(Equal([]string{"id"}))
+
+			// Second FK: NULLABLE author_id (for LEFT JOIN)
+			fkAuthor := postsTable.ForeignKeys[1]
+			Expect(fkAuthor.Name).To(Equal("fk_posts_author_id"))
+			Expect(fkAuthor.Columns).To(Equal([]string{"author_id"}))
+			Expect(fkAuthor.References.Table).To(Equal("users"))
+			Expect(fkAuthor.References.Columns).To(Equal([]string{"id"}))
 
 			// Verify expression-based indexes
 			Expect(postsTable.Indexes).To(HaveLen(2))
@@ -150,8 +159,8 @@ var _ = Describe("Catalog", func() {
 				keys := usersTable.GetUniqueKeys()
 				Expect(keys).To(HaveLen(2))
 
-				// First should be primary key
-				Expect(keys[0].Name).To(Equal("users_pkey"))
+				// First should be primary key (normalized to "primary key")
+				Expect(keys[0].Name).To(Equal("primary key"))
 				Expect(keys[0].Unique).To(BeTrue())
 
 				// Second should be unique index
@@ -188,12 +197,12 @@ var _ = Describe("Catalog", func() {
 				Column: column,
 			}
 
-			condition := &sqlc.Condition{
+			condition := &sqlc.ArgumentCondition{
 				Column:   column,
 				Argument: arg,
 			}
 
-			Expect(condition.String()).To(Equal("user_id = sqlc.arg(user_id)"))
+			Expect(condition.String()).To(Equal("user_id = sqlc.arg(user_id)::integer"))
 		})
 	})
 
@@ -210,7 +219,7 @@ var _ = Describe("Catalog", func() {
 					Column: column,
 				}
 
-				Expect(arg.String()).To(Equal("sqlc.narg(description)"))
+				Expect(arg.String()).To(Equal("sqlc.narg(description)::text"))
 			})
 		})
 
@@ -226,7 +235,7 @@ var _ = Describe("Catalog", func() {
 					Column: column,
 				}
 
-				Expect(arg.String()).To(Equal("sqlc.arg(id)"))
+				Expect(arg.String()).To(Equal("sqlc.arg(id)::integer"))
 			})
 		})
 	})
@@ -272,7 +281,7 @@ var _ = Describe("Catalog", func() {
 				composite.AddColumn(column2)
 
 				result := composite.String()
-				Expect(result).To(Equal("id = sqlc.arg(id) AND email = sqlc.arg(email)"))
+				Expect(result).To(Equal("id = sqlc.arg(id)::integer AND email = sqlc.arg(email)::text"))
 			})
 
 			It("returns empty string when there are no conditions", func() {
@@ -304,7 +313,7 @@ var _ = Describe("Catalog", func() {
 				composite.AddColumn(column2)
 
 				result := composite.String()
-				Expect(result).To(Equal("id = sqlc.arg(id) OR email = sqlc.arg(email)"))
+				Expect(result).To(Equal("id = sqlc.arg(id)::integer OR email = sqlc.arg(email)::text"))
 			})
 		})
 	})

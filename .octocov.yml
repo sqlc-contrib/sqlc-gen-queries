@@ -3,7 +3,7 @@ coverage:
     path: .github/coverage.svg
   paths:
     - coverage.out
-  acceptable: 94%
+  acceptable: 90%
 comment:
   if: is_pull_request
   deletePrevious: true

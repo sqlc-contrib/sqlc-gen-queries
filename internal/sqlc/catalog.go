@@ -35,6 +35,19 @@ func LoadCatalog(path string) (*Catalog, error) {
 	return &catalog, nil
 }
 
+// GetTable retrieves a table by name from the catalog.
+// It searches through all schemas.
+func (x *Catalog) GetTable(name string) *Table {
+	for i := range x.Schemas {
+		for j := range x.Schemas[i].Tables {
+			if x.Schemas[i].Tables[j].Name == name {
+				return &x.Schemas[i].Tables[j]
+			}
+		}
+	}
+	return nil
+}
+
 // Schema represents a database schema containing tables and other database objects.
 type Schema struct {
 	Name   string  `json:"name"`
@@ -88,7 +101,7 @@ func (x *Table) GetUniqueKeys() []*Index {
 	var keys []*Index
 
 	if x.PrimaryKey != nil {
-		x.PrimaryKey.Name = cmp.Or(x.PrimaryKey.Name, "primary key")
+		x.PrimaryKey.Name = "primary key"
 		keys = append(keys, x.PrimaryKey)
 	}
 
@@ -113,6 +126,19 @@ type Column struct {
 	Null bool   `json:"null,omitempty"`
 	// Inherit common attributes
 	Attributes
+}
+
+// ColumnRef represents a reference to a specific column within a table.
+type ColumnRef struct {
+	Name  string
+	Table *Table
+}
+
+// String returns the string representation of the ColumnRef for use in SQL queries.
+func (x *ColumnRef) String() string {
+	column := x.Table.GetColumn(x.Name)
+	// Prepare the column reference in "table.column" format
+	return fmt.Sprintf("%s.%s", x.Table.Name, column.Name)
 }
 
 // Index represents a database index on one or more columns or expressions.
@@ -147,15 +173,25 @@ type ForeignKey struct {
 	} `json:"references"`
 }
 
-// Condition represents a simple equality condition between a column and an argument.
-type Condition struct {
+// ArgumentCondition represents a simple equality condition between a column and an argument.
+type ArgumentCondition struct {
 	Column   *Column
 	Argument *Argument
 }
 
 // String returns the string representation of the Condition for use in SQL queries.
-func (x *Condition) String() string {
+func (x *ArgumentCondition) String() string {
 	return fmt.Sprintf("%s = %v", x.Column.Name, x.Argument)
+}
+
+type ColumnCondition struct {
+	Left  *ColumnRef
+	Right *ColumnRef
+}
+
+// String returns the string representation of the Condition for use in SQL queries.
+func (x *ColumnCondition) String() string {
+	return fmt.Sprintf("%s = %s", x.Left.String(), x.Right.String())
 }
 
 // CompositeCondition represents a combination of multiple conditions using a logical operator (e.g., AND, OR).
@@ -167,11 +203,21 @@ type CompositeCondition struct {
 // AddColumn adds a new condition for the specified column to the CompositeCondition.
 func (x *CompositeCondition) AddColumn(column *Column) {
 	x.Conditions = append(x.Conditions,
-		&Condition{
+		&ArgumentCondition{
 			Column: column,
 			Argument: &Argument{
 				Column: column,
 			},
+		},
+	)
+}
+
+// AddColumnRef adds a new condition comparing two columns to the CompositeCondition.
+func (x *CompositeCondition) AddColumnRef(left, right *ColumnRef) {
+	x.Conditions = append(x.Conditions,
+		&ColumnCondition{
+			Left:  left,
+			Right: right,
 		},
 	)
 }
@@ -195,15 +241,16 @@ func (x *CompositeCondition) String() string {
 
 // Argument represents SQL argument corresponding to a column.
 type Argument struct {
-	Column *Column `json:"column"`
+	Column *Column
 }
 
 // String returns the string representation of the Argument for use in SQL queries.
 func (x *Argument) String() string {
+	// Prepare the argument string based on nullability
 	if x.Column.Null {
-		return fmt.Sprintf("sqlc.narg(%s)", x.Column.Name)
+		return fmt.Sprintf("sqlc.narg(%s)::%s", x.Column.Name, x.Column.Type)
 	}
-	return fmt.Sprintf("sqlc.arg(%s)", x.Column.Name)
+	return fmt.Sprintf("sqlc.arg(%s)::%s", x.Column.Name, x.Column.Type)
 }
 
 // Attributes represents common attributes that can be applied to schemas, tables, and columns.
