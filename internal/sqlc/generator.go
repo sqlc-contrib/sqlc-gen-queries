@@ -125,6 +125,7 @@ func (x *Generator) Generate() error {
 					Column: &Column{
 						Name: "page_start",
 						Type: "text",
+						Null: true,
 					},
 				}
 				column := table.PrimaryKey.Parts[0].Column
