@@ -20,7 +20,6 @@ func main() {
 				Name:    "config-file",
 				Usage:   "Path to the sqlc configuration file.",
 				Sources: cli.EnvVars("SQLC_CONFIG_FILE"),
-				Value:   "sqlc.yaml",
 			},
 			&cli.StringFlag{
 				Name:    "catalog-file",

@@ -20,17 +20,33 @@ type Config struct {
 // LoadConfig loads a sqlc.yaml configuration file from the specified path
 // and returns a Config struct. The file is expected to be in YAML format.
 func LoadConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+	var files []string
+
+	if path != "" {
+		files = append(files, path)
+	} else {
+		files = []string{"sqlc.yaml", "sqlc.yml"}
 	}
 
-	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, err
+	for _, path := range files {
+		data, err := os.ReadFile(path)
+		if os.IsNotExist(err) {
+			continue
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		var config Config
+		if err := yaml.Unmarshal(data, &config); err != nil {
+			return nil, err
+		}
+
+		return &config, nil
 	}
 
-	return &config, nil
+	return nil, os.ErrNotExist
 }
 
 // SQL represents a single SQL configuration block within the sqlc.yaml file.

@@ -18,7 +18,7 @@ var _ = Describe("Config", func() {
 		When("the file does not exist", func() {
 			It("returns an error", func() {
 				config, err := sqlc.LoadConfig("./config_test.json")
-				Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
+				Expect(err).To(MatchError(ContainSubstring("file does not exist")))
 				Expect(config).To(BeNil())
 			})
 		})
