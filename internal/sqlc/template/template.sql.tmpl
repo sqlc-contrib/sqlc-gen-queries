@@ -8,9 +8,7 @@ SET search_path TO {{.Schema}};
 -- Returns the row or an error if not found.
 -- name: Get{{table_name $.Table.Name "one"}}{{query_index $key}} :one
 SELECT
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
-{{end}}    {{$column.Name}}
-{{- end}}
+    *
 FROM
     {{$.Table.Name}}
 WHERE
@@ -35,9 +33,7 @@ WHERE
 -- Executes the query once for each provided key value and returns individual results.
 -- name: BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}} :batchone
 SELECT
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
-{{end}}    {{$column.Name}}
-{{- end}}
+    *
 FROM
     {{$.Table.Name}}
 WHERE
@@ -232,9 +228,7 @@ INSERT INTO {{.Table.Name}} (
 --   Offset-based: Use page_offset + page_limit for traditional page number pagination.
 -- name: List{{table_name .Table.Name "many"}} :many
 SELECT
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
-{{end}}    {{$column.Name}}
-{{- end}}
+    *
 FROM
     {{$.Table.Name}}
 {{- $page_start := page_start $.Table}}
@@ -267,9 +261,7 @@ OFFSET
 --   Offset-based: Use page_offset + page_limit for traditional page number pagination.
 -- name: List{{table_name $.Table.Name "many"}}{{query_index $key}} :many
 SELECT
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
-{{end}}    {{$column.Name}}
-{{- end}}
+    *
 FROM
     {{$.Table.Name}}
 {{- $condition := query_condition $.Table $key}}
