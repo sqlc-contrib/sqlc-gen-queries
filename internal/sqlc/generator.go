@@ -10,6 +10,11 @@ import (
 	"github.com/sqlc-contrib/sqlc-gen-queries/internal/sqlc/template"
 )
 
+func init() {
+	inflect.AddSingular("quota", "quota")
+	inflect.AddPlural("quota", "quotas")
+}
+
 // Generator generates an SQL queries
 type Generator struct {
 	Config  *Config
