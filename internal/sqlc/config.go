@@ -53,7 +53,18 @@ func LoadConfig(path string) (*Config, error) {
 // Each SQL block defines the schema files, query files, and database engine
 // for a specific code generation target.
 type SQL struct {
-	Schema  string `yaml:"schema"`
-	Queries string `yaml:"queries"`
-	Engine  string `yaml:"engine"`
+	Schema      string   `yaml:"schema"`
+	Engine      string   `yaml:"engine"`
+	Queries     string   `yaml:"queries"`
+	SkipQueries []string `yaml:"skip_queries,omitempty"`
+}
+
+// GetSkipQueriesSet returns a set of query names to skip for efficient lookup.
+// The returned map allows O(1) lookup to check if a query should be skipped.
+func (s *SQL) GetSkipQueriesSet() map[string]bool {
+	skipSet := make(map[string]bool, len(s.SkipQueries))
+	for _, name := range s.SkipQueries {
+		skipSet[name] = true
+	}
+	return skipSet
 }

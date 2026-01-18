@@ -4,21 +4,26 @@
 
 SET search_path TO {{.Schema}};
 
-{{range $idx, $key := .Table.GetUniqueKeys}}-- Get{{table_name $.Table.Name "one"}}{{query_index $key}} retrieves a single row from '{{$.Table.Name}}' by {{$key.Name}}.
+{{range $idx, $key := .Table.GetUniqueKeys}}{{- $query_name := printf "Get%s%s" (table_name $.Table.Name "one") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
+-- Get{{table_name $.Table.Name "one"}}{{query_index $key}} retrieves a single row from '{{$.Table.Name}}' by {{$key.Name}}.
 -- Returns the row or an error if not found.
--- name: Get{{table_name $.Table.Name "one"}}{{query_index $key}} :one
+-- name: {{$query_name}} :one
 SELECT
     *
 FROM
     {{$.Table.Name}}
 WHERE
     {{query_condition $.Table $key}};
+{{- end}}
 {{- if eq $key $.Table.PrimaryKey}}
 {{- range $fk := $.Table.ForeignKeys}}
+{{- $query_name := printf "Get%s%sWith%s" (table_name $.Table.Name "one") (query_index $key) (table_name (table_ref $fk) "one")}}
+{{- if not (should_skip $ $query_name)}}
 
 -- Get{{table_name $.Table.Name "one"}}{{query_index $key}}With{{table_name (table_ref $fk) "one"}} retrieves a row from '{{$.Table.Name}}' by its primary key with its related '{{$fk.References.Table}}' record.
 -- The result is a struct with both tables table_embedded.
--- name: Get{{table_name $.Table.Name "one"}}{{query_index $key}}With{{table_name (table_ref $fk) "one"}} :one
+-- name: {{$query_name}} :one
 SELECT
     {{table_embed $.Table.Name}}, {{table_embed $fk.References.Table}}
 FROM
@@ -28,22 +33,28 @@ WHERE
     {{query_condition $.Table $key}};
 {{- end}}
 {{- end}}
+{{- end}}
 
+{{- $query_name := printf "BatchGet%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}} retrieves multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Executes the query once for each provided key value and returns individual results.
--- name: BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}} :batchone
+-- name: {{$query_name}} :batchone
 SELECT
     *
 FROM
     {{$.Table.Name}}
 WHERE
     {{query_condition $.Table $key}};
+{{- end}}
 {{- if eq $key $.Table.PrimaryKey}}
 {{- range $fk := $.Table.ForeignKeys}}
+{{- $query_name := printf "BatchGet%s%sWith%s" (table_name $.Table.Name "many") (query_index $key) (table_name (table_ref $fk) "one")}}
+{{- if not (should_skip $ $query_name)}}
 
 -- BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}}With{{table_name (table_ref $fk) "one"}} retrieves rows from '{{$.Table.Name}}' by primary key with their related '{{$fk.References.Table}}' records.
 -- The result is a struct with both tables table_embedded for each row.
--- name: BatchGet{{table_name $.Table.Name "many"}}{{query_index $key}}With{{table_name (table_ref $fk) "one"}} :batchone
+-- name: {{$query_name}} :batchone
 SELECT
     {{table_embed $.Table.Name}}, {{table_embed $fk.References.Table}}
 FROM
@@ -53,10 +64,13 @@ WHERE
     {{query_condition $.Table $key}};
 {{- end}}
 {{- end}}
+{{- end}}
 
+{{- $query_name := printf "Update%s%s" (table_name $.Table.Name "one") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- Update{{table_name $.Table.Name "one"}}{{query_index $key}} updates a row in '{{$.Table.Name}}' identified by {{$key.Name}}.
 -- Uses update_mask to specify which fields to update. Returns the updated row.
--- name: Update{{table_name $.Table.Name "one"}}{{query_index $key}} :one
+-- name: {{$query_name}} :one
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
@@ -69,10 +83,13 @@ SET
 WHERE
     {{query_condition $.Table $key}}
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "ExecUpdate%s%s" (table_name $.Table.Name "one") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- ExecUpdate{{table_name $.Table.Name "one"}}{{query_index $key}} updates a row in '{{$.Table.Name}}' identified by {{$key.Name}}.
 -- Uses update_mask to specify which fields to update. Returns number of affected rows.
--- name: ExecUpdate{{table_name $.Table.Name "one"}}{{query_index $key}} :exec
+-- name: {{$query_name}} :exec
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
@@ -84,10 +101,13 @@ SET
 {{- end}}
 WHERE
     {{query_condition $.Table $key}};
+{{- end}}
 
+{{- $query_name := printf "BatchUpdate%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Uses update_mask for each row to specify which fields to update. Returns updated rows.
--- name: BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchone
+-- name: {{$query_name}} :batchone
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
@@ -100,10 +120,13 @@ SET
 WHERE
     {{query_condition $.Table $key}}
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "BatchExecUpdate%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Uses update_mask for each row to specify which fields to update. Returns number of affected rows.
--- name: BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
+-- name: {{$query_name}} :batchexec
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
@@ -115,41 +138,56 @@ SET
 {{- end}}
 WHERE
     {{query_condition $.Table $key}};
+{{- end}}
 
+{{- $query_name := printf "Delete%s%s" (table_name $.Table.Name "one") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- Delete{{table_name $.Table.Name "one"}}{{query_index $key}} deletes a single row from '{{$.Table.Name}}' by {{$key.Name}}.
 -- Returns the deleted row or an error if not found.
--- name: Delete{{table_name $.Table.Name "one"}}{{query_index $key}} :one
+-- name: {{$query_name}} :one
 DELETE FROM {{$.Table.Name}}
 WHERE
     {{query_condition $.Table $key}}
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "ExecDelete%s%s" (table_name $.Table.Name "one") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- ExecDelete{{table_name $.Table.Name "one"}}{{query_index $key}} deletes a single row from '{{$.Table.Name}}' by {{$key.Name}}.
 -- Returns number of affected rows (0 if not found, 1 if deleted).
--- name: ExecDelete{{table_name $.Table.Name "one"}}{{query_index $key}} :exec
+-- name: {{$query_name}} :exec
 DELETE FROM {{$.Table.Name}}
 WHERE
     {{query_condition $.Table $key}};
+{{- end}}
 
+{{- $query_name := printf "BatchDelete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Executes the delete once for each provided key value and returns deleted rows.
--- name: BatchDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :batchone
+-- name: {{$query_name}} :batchone
 DELETE FROM {{$.Table.Name}}
 WHERE
     {{query_condition $.Table $key}}
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "BatchExecDelete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}' by {{$key.Name}} in a single batch operation.
 -- Executes the delete once for each provided key value and returns number of affected rows.
--- name: BatchExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
+-- name: {{$query_name}} :batchexec
 DELETE FROM {{$.Table.Name}}
 WHERE
     {{query_condition $.Table $key}};
+{{- end}}
 
 {{end}}
+{{- $query_name := printf "Insert%s" (table_name .Table.Name "one")}}
+{{- if not (should_skip . $query_name)}}
 -- Insert{{table_name .Table.Name "one"}} inserts a new row into '{{.Table.Name}}'.
 -- Returns the inserted row with all fields populated.
--- name: Insert{{table_name .Table.Name "one"}} :one
+-- name: {{$query_name}} :one
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
@@ -160,10 +198,13 @@ INSERT INTO {{.Table.Name}} (
 {{- end}}
 )
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "ExecInsert%s" (table_name .Table.Name "one")}}
+{{- if not (should_skip . $query_name)}}
 -- ExecInsert{{table_name .Table.Name "one"}} inserts a new row into '{{.Table.Name}}'.
 -- Returns number of affected rows (should always be 1 on success).
--- name: ExecInsert{{table_name .Table.Name "one"}} :exec
+-- name: {{$query_name}} :exec
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
@@ -173,10 +214,13 @@ INSERT INTO {{.Table.Name}} (
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
+{{- end}}
 
+{{- $query_name := printf "BatchInsert%s" (table_name .Table.Name "many")}}
+{{- if not (should_skip . $query_name)}}
 -- BatchInsert{{table_name .Table.Name "many"}} inserts multiple rows into '{{.Table.Name}}' in a single batch operation.
 -- Executes the insert once for each provided set of values and returns inserted rows.
--- name: BatchInsert{{table_name .Table.Name "many"}} :batchone
+-- name: {{$query_name}} :batchone
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
@@ -187,10 +231,13 @@ INSERT INTO {{.Table.Name}} (
 {{- end}}
 )
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "BatchExecInsert%s" (table_name .Table.Name "many")}}
+{{- if not (should_skip . $query_name)}}
 -- BatchExecInsert{{table_name .Table.Name "many"}} inserts multiple rows into '{{.Table.Name}}' in a single batch operation.
 -- Executes the insert once for each provided set of values and returns number of affected rows.
--- name: BatchExecInsert{{table_name .Table.Name "many"}} :batchexec
+-- name: {{$query_name}} :batchexec
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
@@ -200,10 +247,13 @@ INSERT INTO {{.Table.Name}} (
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
+{{- end}}
 
+{{- $query_name := printf "Copy%s" (table_name .Table.Name "many")}}
+{{- if not (should_skip . $query_name)}}
 -- Copy{{table_name .Table.Name "many"}} efficiently bulk inserts multiple rows into '{{.Table.Name}}' using PostgreSQL COPY protocol.
 -- This is the fastest way to insert large amounts of data. Does not return inserted rows.
--- name: Copy{{table_name .Table.Name "many"}} :copyfrom
+-- name: {{$query_name}} :copyfrom
 INSERT INTO {{.Table.Name}} (
 {{ range $i, $column := .Table.Columns}}{{if $i}},
 {{end}}    {{$column.Name}}
@@ -213,12 +263,15 @@ INSERT INTO {{.Table.Name}} (
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
+{{- end}}
 
+{{- $query_name := printf "List%s" (table_name .Table.Name "many")}}
+{{- if not (should_skip . $query_name)}}
 -- List{{table_name .Table.Name "many"}} retrieves a paginated list of rows from '{{$.Table.Name}}'.
--- 
+--
 -- Filtering:
 --   The 'filter' parameter enables dynamic WHERE clauses for flexible querying.
---   Pass NULL for no filtering, or use a query builder (e.g., pgxmql.WhereClause) 
+--   Pass NULL for no filtering, or use a query builder (e.g., pgxmql.WhereClause)
 --   to construct runtime conditions. The void type cast allows query rewriting.
 --   Example: filter can add conditions like "status = 'active' AND created_at > '2024-01-01'"
 --
@@ -226,7 +279,7 @@ INSERT INTO {{.Table.Name}} (
 --   Cursor-based: Use page_start (ID of last item from previous page) + page_limit.
 --                 Returns items AFTER the cursor. Set page_start to the last item's ID from current page as next cursor.
 --   Offset-based: Use page_offset + page_limit for traditional page number pagination.
--- name: List{{table_name .Table.Name "many"}} :many
+-- name: {{$query_name}} :many
 SELECT
     *
 FROM
@@ -246,12 +299,15 @@ LIMIT
     sqlc.narg(page_limit)::int
 OFFSET
     sqlc.narg(page_offset)::int;
+{{- end}}
 
-{{range $idx, $key := .Table.GetNonUniqueIndexes}}-- List{{table_name $.Table.Name "many"}}{{query_index $key}} retrieves a paginated list of rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
--- 
+{{range $idx, $key := .Table.GetNonUniqueIndexes}}{{- $query_name := printf "List%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
+-- List{{table_name $.Table.Name "many"}}{{query_index $key}} retrieves a paginated list of rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
+--
 -- Filtering:
 --   The 'filter' parameter enables dynamic WHERE clauses for flexible querying.
---   Pass NULL for no filtering, or use a query builder (e.g., pgxmql.WhereClause) 
+--   Pass NULL for no filtering, or use a query builder (e.g., pgxmql.WhereClause)
 --   to construct runtime conditions. The void type cast allows query rewriting.
 --   Example: filter can add conditions like "status = 'active' AND created_at > '2024-01-01'"
 --
@@ -259,7 +315,7 @@ OFFSET
 --   Cursor-based: Use page_start (ID of last item from previous page) + page_limit.
 --                 Returns items AFTER the cursor. Set page_start to the last item's ID from current page as next cursor.
 --   Offset-based: Use page_offset + page_limit for traditional page number pagination.
--- name: List{{table_name $.Table.Name "many"}}{{query_index $key}} :many
+-- name: {{$query_name}} :many
 SELECT
     *
 FROM
@@ -285,10 +341,13 @@ LIMIT
     sqlc.narg(page_limit)::int
 OFFSET
     sqlc.narg(page_offset)::int;
+{{- end}}
 
+{{- $query_name := printf "Update%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- Update{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 -- Uses update_mask to specify which fields to update. Returns updated rows.
--- name: Update{{table_name $.Table.Name "many"}}{{query_index $key}} :many
+-- name: {{$query_name}} :many
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
@@ -304,10 +363,13 @@ WHERE
     {{$condition}}
 {{- end}}
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "ExecUpdate%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- ExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 -- Uses update_mask to specify which fields to update. Returns number of affected rows.
--- name: ExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :execrows
+-- name: {{$query_name}} :execrows
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
@@ -322,10 +384,13 @@ SET
 WHERE
     {{$condition}}
 {{- end}};
+{{- end}}
 
+{{- $query_name := printf "BatchUpdate%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
 -- Uses update_mask for each row to specify which fields to update. Returns updated rows.
--- name: BatchUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchmany
+-- name: {{$query_name}} :batchmany
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
@@ -341,10 +406,13 @@ WHERE
     {{$condition}}
 {{- end}}
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "BatchExecUpdate%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} updates multiple rows in '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
 -- Uses update_mask for each row to specify which fields to update. Returns number of affected rows.
--- name: BatchExecUpdate{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
+-- name: {{$query_name}} :batchexec
 UPDATE {{$.Table.Name}}
 SET
 {{ range $i, $column := $.Table.Columns}}{{if $i}},
@@ -359,10 +427,13 @@ SET
 WHERE
     {{$condition}}
 {{- end}};
+{{- end}}
 
+{{- $query_name := printf "Delete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- Delete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 -- Returns the deleted rows.
--- name: Delete{{table_name $.Table.Name "many"}}{{query_index $key}} :many
+-- name: {{$query_name}} :many
 DELETE FROM {{$.Table.Name}}
 {{- $condition := query_condition $.Table $key}}
 {{- if $condition}}
@@ -370,20 +441,26 @@ WHERE
     {{$condition}}
 {{- end}}
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "ExecDelete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- ExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 -- Returns number of affected rows.
--- name: ExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :execrows
+-- name: {{$query_name}} :execrows
 DELETE FROM {{$.Table.Name}}
 {{- $condition := query_condition $.Table $key}}
 {{- if $condition}}
 WHERE
     {{$condition}}
 {{- end}};
+{{- end}}
 
+{{- $query_name := printf "BatchDelete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
 -- Executes the delete once for each provided key value and returns deleted rows.
--- name: BatchDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :batchmany
+-- name: {{$query_name}} :batchmany
 DELETE FROM {{$.Table.Name}}
 {{- $condition := query_condition $.Table $key}}
 {{- if $condition}}
@@ -391,15 +468,19 @@ WHERE
     {{$condition}}
 {{- end}}
 RETURNING *;
+{{- end}}
 
+{{- $query_name := printf "BatchExecDelete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if not (should_skip $ $query_name)}}
 -- BatchExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} deletes multiple rows from '{{$.Table.Name}}'{{if $key.Name}} by {{$key.Name}}{{end}} in a single batch operation.
 -- Executes the delete once for each provided key value and returns number of affected rows.
--- name: BatchExecDelete{{table_name $.Table.Name "many"}}{{query_index $key}} :batchexec
+-- name: {{$query_name}} :batchexec
 DELETE FROM {{$.Table.Name}}
 {{- $condition := query_condition $.Table $key}}
 {{- if $condition}}
 WHERE
     {{$condition}}
 {{- end}};
+{{- end}}
 
 {{end}}

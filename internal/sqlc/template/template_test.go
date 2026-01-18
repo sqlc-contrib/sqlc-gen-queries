@@ -24,6 +24,8 @@ var _ = Describe("Template", func() {
 			// Pagination Functions
 			"page_start": func(args ...any) string { return "" },
 			"page_order": func(args ...any) string { return "" },
+			// Query skip function
+			"should_skip": func(args ...any) bool { return false },
 		}
 
 		It("opens and parses template successfully", func() {

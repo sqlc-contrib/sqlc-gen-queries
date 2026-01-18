@@ -70,5 +70,104 @@ var _ = Describe("Generator", func() {
 				}
 			})
 		})
+
+		Context("with skip_queries configuration", func() {
+			BeforeEach(func() {
+				dir, err := os.MkdirTemp("", "sqlc-gen-test-exclude-*")
+				Expect(err).NotTo(HaveOccurred())
+
+				catalog, err := sqlc.LoadCatalog("./catalog_test.json")
+				Expect(err).NotTo(HaveOccurred())
+
+				generator = &sqlc.Generator{
+					Catalog: catalog,
+					Config: &sqlc.Config{
+						Version: "2",
+						SQL: []sqlc.SQL{
+							{
+								Schema:  "schema.sql",
+								Engine:  "postgresql",
+								Queries: dir,
+								SkipQueries: []string{
+									"GetUser",
+									"DeleteUser",
+									"BatchGetUsers",
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("does not generate skipped queries", func() {
+				Expect(generator.Generate()).NotTo(HaveOccurred())
+
+				for _, config := range generator.Config.SQL {
+					path := filepath.Join(config.Queries, "users.sql")
+					Expect(path).To(BeAnExistingFile())
+					content, err := os.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Verify excluded queries are not present
+					Expect(string(content)).NotTo(ContainSubstring("name: GetUser :one"))
+					Expect(string(content)).NotTo(ContainSubstring("name: DeleteUser :one"))
+					Expect(string(content)).NotTo(ContainSubstring("name: BatchGetUsers :batchone"))
+
+					// Verify other queries are still present
+					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
+					Expect(string(content)).To(ContainSubstring("name: UpdateUser :one"))
+				}
+			})
+
+			It("generates all queries when skip_queries is empty", func() {
+				generator.Config.SQL[0].SkipQueries = []string{}
+				Expect(generator.Generate()).NotTo(HaveOccurred())
+
+				for _, config := range generator.Config.SQL {
+					path := filepath.Join(config.Queries, "users.sql")
+					Expect(path).To(BeAnExistingFile())
+					content, err := os.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Verify all queries are present
+					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
+					Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
+					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
+					Expect(string(content)).To(ContainSubstring("name: UpdateUser :one"))
+				}
+			})
+
+			It("generates all queries when skip_queries is nil", func() {
+				generator.Config.SQL[0].SkipQueries = nil
+				Expect(generator.Generate()).NotTo(HaveOccurred())
+
+				for _, config := range generator.Config.SQL {
+					path := filepath.Join(config.Queries, "users.sql")
+					Expect(path).To(BeAnExistingFile())
+					content, err := os.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Verify all queries are present
+					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
+					Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
+				}
+			})
+
+			It("handles non-existent query names gracefully", func() {
+				generator.Config.SQL[0].SkipQueries = []string{"NonExistentQuery", "AnotherFakeQuery"}
+				Expect(generator.Generate()).NotTo(HaveOccurred())
+
+				for _, config := range generator.Config.SQL {
+					path := filepath.Join(config.Queries, "users.sql")
+					Expect(path).To(BeAnExistingFile())
+					content, err := os.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Verify all real queries are still present
+					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
+					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
+				}
+			})
+		})
 	})
 })

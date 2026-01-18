@@ -25,9 +25,10 @@ type Generator struct {
 func (x *Generator) Generate() error {
 	// Context holds data for template execution
 	type Context struct {
-		Engine string
-		Schema string
-		Table  *Table
+		Engine      string
+		Schema      string
+		Table       *Table
+		SkipQueries map[string]bool
 	}
 
 	opts := map[string]any{
@@ -144,6 +145,13 @@ func (x *Generator) Generate() error {
 			}
 			return ""
 		},
+		// Query skip function
+		"should_skip": func(ctx Context, queryName string) bool {
+			if ctx.SkipQueries == nil {
+				return false
+			}
+			return ctx.SkipQueries[queryName]
+		},
 	}
 
 	// Open the template file
@@ -156,6 +164,8 @@ func (x *Generator) Generate() error {
 		if err := os.MkdirAll(config.Queries, os.ModePerm); err != nil {
 			return err
 		}
+
+		skipQueries := config.GetSkipQueriesSet()
 
 		for _, schema := range x.Catalog.Schemas {
 			for _, table := range schema.Tables {
@@ -170,9 +180,10 @@ func (x *Generator) Generate() error {
 				defer file.Close()
 
 				ctx := Context{
-					Engine: config.Engine,
-					Schema: schema.Name,
-					Table:  &table,
+					Engine:      config.Engine,
+					Schema:      schema.Name,
+					Table:       &table,
+					SkipQueries: skipQueries,
 				}
 				// Execute template
 				if err := template.Execute(file, ctx); err != nil {
