@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/sqlc-contrib/sqlc-gen-queries)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![sqlc](https://img.shields.io/badge/sqlc-compatible-blue)](https://sqlc.dev)
-[![Coverage](https://raw.githubusercontent.com/sqlc-contrib/sqlc-gen-queries/main/.github/coverage.svg)](https://github.com/sqlc-contrib/sqlc-gen-queries/actions)
+[![Coverage](https://raw.githubusercontent.com/sqlc-contrib/sqlc-gen-queries/main/.github/coverage.svg)](https://github.com/sqlc-contrib/sqlc-gen-queries/actions/workflows/ci.yml)
 
 A CLI tool that generates [sqlc](https://sqlc.dev)-compatible SQL queries from your database schema catalog. Point it at a schema catalog and a configuration file, and it produces ready-to-use query files for sqlc.
 
