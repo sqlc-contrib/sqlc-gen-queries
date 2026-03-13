@@ -1,9 +1,17 @@
 version: "2"
+plugins:
+  - name: gen-queries
+    process:
+      cmd: "true"
 sql:
   - schema: "schema/migration"
     queries: "ent/query"
     engine: "postgresql"
-    skip_queries:
-      - "DeleteUser"
-      - "UpdateAuditLog"
-      - "GetUserByEmail"
+    codegen:
+      - plugin: gen-queries
+        out: "ent/query"
+        options:
+          queries:
+            - "ListUsers"
+            - "CopyUsers"
+            - "GetUserByEmail"

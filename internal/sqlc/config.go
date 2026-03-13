@@ -10,6 +10,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// PluginName is the name used to identify the gen-queries plugin in sqlc codegen configuration.
+const PluginName = "gen-queries"
+
 // Config represents the root structure of a sqlc.yaml configuration file.
 // This file controls how sqlc generates Go code from SQL schemas and queries.
 type Config struct {
@@ -53,18 +56,42 @@ func LoadConfig(path string) (*Config, error) {
 // Each SQL block defines the schema files, query files, and database engine
 // for a specific code generation target.
 type SQL struct {
-	Schema      string   `yaml:"schema"`
-	Engine      string   `yaml:"engine"`
-	Queries     string   `yaml:"queries"`
-	SkipQueries []string `yaml:"skip_queries,omitempty"`
+	Schema  string    `yaml:"schema"`
+	Engine  string    `yaml:"engine"`
+	Queries string    `yaml:"queries"`
+	Codegen []Codegen `yaml:"codegen,omitempty"`
 }
 
-// GetSkipQueriesSet returns a set of query names to skip for efficient lookup.
-// The returned map allows O(1) lookup to check if a query should be skipped.
-func (s *SQL) GetSkipQueriesSet() map[string]bool {
-	skipSet := make(map[string]bool, len(s.SkipQueries))
-	for _, name := range s.SkipQueries {
-		skipSet[name] = true
+// Codegen represents a code generation plugin configuration block.
+type Codegen struct {
+	Plugin  string         `yaml:"plugin"`
+	Out     string         `yaml:"out"`
+	Options CodegenOptions `yaml:"options,omitempty"`
+}
+
+// CodegenOptions holds plugin-specific options for the gen-queries plugin.
+type CodegenOptions struct {
+	Queries []string `yaml:"queries,omitempty"`
+}
+
+// GetOptions returns the CodegenOptions for the gen-queries plugin.
+// If no matching codegen entry is found, returns an empty CodegenOptions.
+func (s *SQL) GetOptions() CodegenOptions {
+	for _, c := range s.Codegen {
+		if c.Plugin == PluginName {
+			return c.Options
+		}
 	}
-	return skipSet
+	return CodegenOptions{}
+}
+
+// GetQueriesSet returns a set of opt-in query names for efficient lookup.
+// The returned map allows O(1) lookup to check if a query is enabled.
+func (s *SQL) GetQueriesSet() map[string]bool {
+	opts := s.GetOptions()
+	querySet := make(map[string]bool, len(opts.Queries))
+	for _, name := range opts.Queries {
+		querySet[name] = true
+	}
+	return querySet
 }

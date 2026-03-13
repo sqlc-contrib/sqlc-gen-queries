@@ -15,13 +15,17 @@ var _ = Describe("Config", func() {
 			Expect(config).NotTo(BeNil())
 		})
 
-		It("loads a config file with skip_queries", func() {
+		It("loads a config file with codegen options", func() {
 			config, err := sqlc.LoadConfig("./config_test_exclude.yaml")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config).NotTo(BeNil())
 			Expect(config.SQL).To(HaveLen(1))
-			Expect(config.SQL[0].SkipQueries).To(HaveLen(3))
-			Expect(config.SQL[0].SkipQueries).To(ContainElements("DeleteUser", "UpdateAuditLog", "GetUserByEmail"))
+			Expect(config.SQL[0].Codegen).To(HaveLen(1))
+			Expect(config.SQL[0].Codegen[0].Plugin).To(Equal("gen-queries"))
+			Expect(config.SQL[0].Codegen[0].Out).To(Equal("ent/query"))
+			opts := config.SQL[0].GetOptions()
+			Expect(opts.Queries).To(HaveLen(3))
+			Expect(opts.Queries).To(ContainElements("ListUsers", "CopyUsers", "GetUserByEmail"))
 		})
 
 		When("the file does not exist", func() {
@@ -41,43 +45,100 @@ var _ = Describe("Config", func() {
 		})
 	})
 
-	Describe("SQL.GetSkipQueriesSet", func() {
-		It("returns an empty map when skip_queries is nil", func() {
+	Describe("SQL.GetOptions", func() {
+		It("returns empty options when codegen is nil", func() {
 			sql := sqlc.SQL{}
-			skipSet := sql.GetSkipQueriesSet()
-			Expect(skipSet).NotTo(BeNil())
-			Expect(skipSet).To(BeEmpty())
+			opts := sql.GetOptions()
+			Expect(opts.Queries).To(BeNil())
 		})
 
-		It("returns an empty map when skip_queries is empty", func() {
+		It("returns empty options when no matching plugin", func() {
 			sql := sqlc.SQL{
-				SkipQueries: []string{},
+				Codegen: []sqlc.Codegen{
+					{Plugin: "other-plugin", Out: "out"},
+				},
 			}
-			skipSet := sql.GetSkipQueriesSet()
-			Expect(skipSet).NotTo(BeNil())
-			Expect(skipSet).To(BeEmpty())
+			opts := sql.GetOptions()
+			Expect(opts.Queries).To(BeNil())
+		})
+
+		It("returns options for the gen-queries plugin", func() {
+			sql := sqlc.SQL{
+				Codegen: []sqlc.Codegen{
+					{
+						Plugin: "gen-queries",
+						Out:    "ent/query",
+						Options: sqlc.CodegenOptions{
+							Queries: []string{"ListUsers", "CopyUsers"},
+						},
+					},
+				},
+			}
+			opts := sql.GetOptions()
+			Expect(opts.Queries).To(HaveLen(2))
+			Expect(opts.Queries).To(ContainElements("ListUsers", "CopyUsers"))
+		})
+	})
+
+	Describe("SQL.GetQueriesSet", func() {
+		It("returns an empty map when codegen is nil", func() {
+			sql := sqlc.SQL{}
+			querySet := sql.GetQueriesSet()
+			Expect(querySet).NotTo(BeNil())
+			Expect(querySet).To(BeEmpty())
+		})
+
+		It("returns an empty map when queries is empty", func() {
+			sql := sqlc.SQL{
+				Codegen: []sqlc.Codegen{
+					{
+						Plugin:  "gen-queries",
+						Out:     "ent/query",
+						Options: sqlc.CodegenOptions{Queries: []string{}},
+					},
+				},
+			}
+			querySet := sql.GetQueriesSet()
+			Expect(querySet).NotTo(BeNil())
+			Expect(querySet).To(BeEmpty())
 		})
 
 		It("returns a map with correct query names", func() {
 			sql := sqlc.SQL{
-				SkipQueries: []string{"DeleteUser", "UpdateAuditLog", "GetUserByEmail"},
+				Codegen: []sqlc.Codegen{
+					{
+						Plugin: "gen-queries",
+						Out:    "ent/query",
+						Options: sqlc.CodegenOptions{
+							Queries: []string{"ListUsers", "CopyUsers", "GetUserByEmail"},
+						},
+					},
+				},
 			}
-			skipSet := sql.GetSkipQueriesSet()
-			Expect(skipSet).To(HaveLen(3))
-			Expect(skipSet["DeleteUser"]).To(BeTrue())
-			Expect(skipSet["UpdateAuditLog"]).To(BeTrue())
-			Expect(skipSet["GetUserByEmail"]).To(BeTrue())
-			Expect(skipSet["OtherQuery"]).To(BeFalse())
+			querySet := sql.GetQueriesSet()
+			Expect(querySet).To(HaveLen(3))
+			Expect(querySet["ListUsers"]).To(BeTrue())
+			Expect(querySet["CopyUsers"]).To(BeTrue())
+			Expect(querySet["GetUserByEmail"]).To(BeTrue())
+			Expect(querySet["OtherQuery"]).To(BeFalse())
 		})
 
 		It("provides O(1) lookup", func() {
 			sql := sqlc.SQL{
-				SkipQueries: []string{"Query1", "Query2", "Query3"},
+				Codegen: []sqlc.Codegen{
+					{
+						Plugin: "gen-queries",
+						Out:    "ent/query",
+						Options: sqlc.CodegenOptions{
+							Queries: []string{"Query1", "Query2", "Query3"},
+						},
+					},
+				},
 			}
-			skipSet := sql.GetSkipQueriesSet()
-			_, exists := skipSet["Query2"]
+			querySet := sql.GetQueriesSet()
+			_, exists := querySet["Query2"]
 			Expect(exists).To(BeTrue())
-			_, exists = skipSet["NonExistent"]
+			_, exists = querySet["NonExistent"]
 			Expect(exists).To(BeFalse())
 		})
 	})

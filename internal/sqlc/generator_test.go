@@ -49,7 +49,7 @@ var _ = Describe("Generator", func() {
 			}
 		})
 
-		It("generates valid SQL content", func() {
+		It("generates valid SQL content with default PK queries", func() {
 			err := generator.Generate()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -58,7 +58,16 @@ var _ = Describe("Generator", func() {
 				Expect(path).To(BeAnExistingFile())
 				content, err := os.ReadFile(path)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(content)).NotTo(BeEmpty())
+
+				// Default PK CRUD queries are always present
+				Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
+				Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
+				Expect(string(content)).To(ContainSubstring("name: UpdateUser :one"))
+				Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
+
+				// Opt-in queries are not present without config
+				Expect(string(content)).NotTo(ContainSubstring("name: ListUsers :many"))
+				Expect(string(content)).NotTo(ContainSubstring("name: CopyUsers :copyfrom"))
 			}
 		})
 
@@ -71,9 +80,9 @@ var _ = Describe("Generator", func() {
 			})
 		})
 
-		Context("with skip_queries configuration", func() {
+		Context("with queries configuration", func() {
 			BeforeEach(func() {
-				dir, err := os.MkdirTemp("", "sqlc-gen-test-exclude-*")
+				dir, err := os.MkdirTemp("", "sqlc-gen-test-queries-*")
 				Expect(err).NotTo(HaveOccurred())
 
 				catalog, err := sqlc.LoadCatalog("./catalog_test.json")
@@ -88,10 +97,17 @@ var _ = Describe("Generator", func() {
 								Schema:  "schema.sql",
 								Engine:  "postgresql",
 								Queries: dir,
-								SkipQueries: []string{
-									"GetUser",
-									"DeleteUser",
-									"BatchGetUsers",
+								Codegen: []sqlc.Codegen{
+									{
+										Plugin: "gen-queries",
+										Out:    dir,
+										Options: sqlc.CodegenOptions{
+											Queries: []string{
+												"ListUsers",
+												"CopyUsers",
+											},
+										},
+									},
 								},
 							},
 						},
@@ -99,7 +115,7 @@ var _ = Describe("Generator", func() {
 				}
 			})
 
-			It("does not generate skipped queries", func() {
+			It("generates opt-in queries when listed", func() {
 				Expect(generator.Generate()).NotTo(HaveOccurred())
 
 				for _, config := range generator.Config.SQL {
@@ -108,19 +124,20 @@ var _ = Describe("Generator", func() {
 					content, err := os.ReadFile(path)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Verify excluded queries are not present
-					Expect(string(content)).NotTo(ContainSubstring("name: GetUser :one"))
-					Expect(string(content)).NotTo(ContainSubstring("name: DeleteUser :one"))
-					Expect(string(content)).NotTo(ContainSubstring("name: BatchGetUsers :batchone"))
-
-					// Verify other queries are still present
+					// Default PK CRUD queries are always present
+					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: UpdateUser :one"))
+					Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
+
+					// Opt-in queries that were listed are present
+					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
+					Expect(string(content)).To(ContainSubstring("name: CopyUsers :copyfrom"))
 				}
 			})
 
-			It("generates all queries when skip_queries is empty", func() {
-				generator.Config.SQL[0].SkipQueries = []string{}
+			It("only generates default queries when queries is empty", func() {
+				generator.Config.SQL[0].Codegen[0].Options.Queries = []string{}
 				Expect(generator.Generate()).NotTo(HaveOccurred())
 
 				for _, config := range generator.Config.SQL {
@@ -129,16 +146,18 @@ var _ = Describe("Generator", func() {
 					content, err := os.ReadFile(path)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Verify all queries are present
+					// Default PK CRUD queries are present
 					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
-					Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
-					Expect(string(content)).To(ContainSubstring("name: UpdateUser :one"))
+
+					// Opt-in queries are not present
+					Expect(string(content)).NotTo(ContainSubstring("name: ListUsers :many"))
+					Expect(string(content)).NotTo(ContainSubstring("name: CopyUsers :copyfrom"))
 				}
 			})
 
-			It("generates all queries when skip_queries is nil", func() {
-				generator.Config.SQL[0].SkipQueries = nil
+			It("only generates default queries when codegen is nil", func() {
+				generator.Config.SQL[0].Codegen = nil
 				Expect(generator.Generate()).NotTo(HaveOccurred())
 
 				for _, config := range generator.Config.SQL {
@@ -147,14 +166,17 @@ var _ = Describe("Generator", func() {
 					content, err := os.ReadFile(path)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Verify all queries are present
+					// Default PK CRUD queries are present
 					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
+
+					// Opt-in queries are not present
+					Expect(string(content)).NotTo(ContainSubstring("name: ListUsers :many"))
 				}
 			})
 
 			It("handles non-existent query names gracefully", func() {
-				generator.Config.SQL[0].SkipQueries = []string{"NonExistentQuery", "AnotherFakeQuery"}
+				generator.Config.SQL[0].Codegen[0].Options.Queries = []string{"NonExistentQuery", "AnotherFakeQuery"}
 				Expect(generator.Generate()).NotTo(HaveOccurred())
 
 				for _, config := range generator.Config.SQL {
@@ -163,9 +185,12 @@ var _ = Describe("Generator", func() {
 					content, err := os.ReadFile(path)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Verify all real queries are still present
+					// Default PK CRUD queries are still present
 					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
+
+					// Non-existent opt-in queries don't cause errors
+					Expect(string(content)).NotTo(ContainSubstring("name: ListUsers :many"))
 				}
 			})
 		})
