@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/sqlc-contrib/sqlc-gen-queries)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![sqlc](https://img.shields.io/badge/sqlc-compatible-blue)](https://sqlc.dev)
-[![Coverage](https://raw.githubusercontent.com/sqlc-contrib/sqlc-gen-queries/main/.github/coverage.svg)](https://github.com/sqlc-contrib/sqlc-gen-queries/actions/workflows/ci.yml)
+[![Coverage](https://raw.githubusercontent.com/sqlc-contrib/sqlc-gen-queries/main/.github/octocov/badge.svg)](https://github.com/sqlc-contrib/sqlc-gen-queries/actions/workflows/ci.yml)
 
 A CLI tool that generates [sqlc](https://sqlc.dev)-compatible SQL queries from your database schema catalog. Point it at a schema catalog and a configuration file, and it produces ready-to-use query files for sqlc.
 
@@ -71,37 +71,37 @@ sql:
 Primary key CRUD operations and their Exec/Batch variants are generated
 automatically for every table:
 
-| Query | Description |
-|-------|-------------|
-| `Get<Table>` | Select a row by primary key |
-| `BatchGet<Tables>` | Batch select rows by primary key |
-| `Insert<Table>` | Insert a row |
-| `ExecInsert<Table>` | Insert a row (exec, returns affected rows) |
-| `BatchInsert<Tables>` | Batch insert rows |
-| `BatchExecInsert<Tables>` | Batch insert rows (exec) |
-| `Update<Table>` | Update a row by primary key |
-| `ExecUpdate<Table>` | Update a row by primary key (exec) |
-| `BatchUpdate<Tables>` | Batch update rows by primary key |
-| `BatchExecUpdate<Tables>` | Batch update rows by primary key (exec) |
-| `Delete<Table>` | Delete a row by primary key |
-| `ExecDelete<Table>` | Delete a row by primary key (exec) |
-| `BatchDelete<Tables>` | Batch delete rows by primary key |
-| `BatchExecDelete<Tables>` | Batch delete rows by primary key (exec) |
+| Query                     | Description                                |
+| ------------------------- | ------------------------------------------ |
+| `Get<Table>`              | Select a row by primary key                |
+| `BatchGet<Tables>`        | Batch select rows by primary key           |
+| `Insert<Table>`           | Insert a row                               |
+| `ExecInsert<Table>`       | Insert a row (exec, returns affected rows) |
+| `BatchInsert<Tables>`     | Batch insert rows                          |
+| `BatchExecInsert<Tables>` | Batch insert rows (exec)                   |
+| `Update<Table>`           | Update a row by primary key                |
+| `ExecUpdate<Table>`       | Update a row by primary key (exec)         |
+| `BatchUpdate<Tables>`     | Batch update rows by primary key           |
+| `BatchExecUpdate<Tables>` | Batch update rows by primary key (exec)    |
+| `Delete<Table>`           | Delete a row by primary key                |
+| `ExecDelete<Table>`       | Delete a row by primary key (exec)         |
+| `BatchDelete<Tables>`     | Batch delete rows by primary key           |
+| `BatchExecDelete<Tables>` | Batch delete rows by primary key (exec)    |
 
 ### Opt-in queries
 
 These queries are only generated when explicitly listed in `options.queries`:
 
-| Query | Description |
-|-------|-------------|
-| `List<Tables>` | Paginated list with filtering |
-| `Copy<Tables>` | Bulk insert via PostgreSQL COPY protocol |
-| `Get<Table>With<Related>` | Select with FK join |
-| `BatchGet<Tables>With<Related>` | Batch select with FK join |
-| `Get<Table>By<Columns>` | Select by non-PK unique index |
-| `List<Tables>By<Columns>` | Paginated list by non-unique index |
-| `Update<Tables>By<Columns>` | Update by non-unique index |
-| `Delete<Tables>By<Columns>` | Delete by non-unique index |
+| Query                           | Description                              |
+| ------------------------------- | ---------------------------------------- |
+| `List<Tables>`                  | Paginated list with filtering            |
+| `Copy<Tables>`                  | Bulk insert via PostgreSQL COPY protocol |
+| `Get<Table>With<Related>`       | Select with FK join                      |
+| `BatchGet<Tables>With<Related>` | Batch select with FK join                |
+| `Get<Table>By<Columns>`         | Select by non-PK unique index            |
+| `List<Tables>By<Columns>`       | Paginated list by non-unique index       |
+| `Update<Tables>By<Columns>`     | Update by non-unique index               |
+| `Delete<Tables>By<Columns>`     | Delete by non-unique index               |
 
 All opt-in queries also have their Exec/Batch/BatchExec variants available.
 
@@ -115,10 +115,10 @@ sqlc-gen-queries --config-file sqlc.yaml --catalog-file schema.json
 sqlc generate
 ```
 
-| Flag | Environment Variable | Default | Description |
-|------|---------------------|---------|-------------|
-| `--config-file` | `SQLC_CONFIG_FILE` | `sqlc.yaml` | Path to the sqlc configuration file |
-| `--catalog-file` | `SQLC_CATALOG_FILE` | `schema.json` | Path to the catalog file |
+| Flag             | Environment Variable | Default       | Description                         |
+| ---------------- | -------------------- | ------------- | ----------------------------------- |
+| `--config-file`  | `SQLC_CONFIG_FILE`   | `sqlc.yaml`   | Path to the sqlc configuration file |
+| `--catalog-file` | `SQLC_CATALOG_FILE`  | `schema.json` | Path to the catalog file            |
 
 ## Contributing
 
