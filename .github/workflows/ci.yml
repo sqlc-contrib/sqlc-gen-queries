@@ -33,8 +33,3 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-      - name: Run release-please
-        uses: googleapis/release-please-action@v4
-        with:
-          release-type: go
-          token: ${{ secrets.GITHUB_TOKEN }}
