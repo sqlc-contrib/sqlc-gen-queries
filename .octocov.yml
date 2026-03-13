@@ -11,7 +11,7 @@ summary:
   if: true
 report:
   if: is_default_branch
-  path: .github/octocov-report.json
+  path: .github/octocov.json
 push:
   if: is_default_branch
   message: Update by octocov [skip ci]
