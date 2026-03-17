@@ -1,14 +1,19 @@
 package sqlc
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/go-openapi/inflect"
 	"github.com/sqlc-contrib/sqlc-gen-queries/internal/sqlc/template"
 )
+
+// blank matches two or more consecutive blank lines.
+var blank = regexp.MustCompile(`\n{3,}`)
 
 func init() {
 	inflect.AddSingular("quota", "quota")
@@ -182,8 +187,14 @@ func (x *Generator) Generate() error {
 					Table:   &table,
 					Queries: queries,
 				}
-				// Execute template
-				if err := template.Execute(file, ctx); err != nil {
+				// Execute template into buffer, then squeeze blank lines
+				var buffer bytes.Buffer
+				if err := template.Execute(&buffer, ctx); err != nil {
+					return err
+				}
+
+				data := blank.ReplaceAll(buffer.Bytes(), []byte("\n\n"))
+				if _, err := file.Write(data); err != nil {
 					return err
 				}
 			}
