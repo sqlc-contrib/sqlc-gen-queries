@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.3](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.2...v0.0.3) (2026-03-17)
+
+
+### Bug Fixes
+
+* squeeze consecutive blank lines in generated output ([be78ef4](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/be78ef41d726deae69ba92711ccf90259296cdc5))
+
 ## [0.0.2](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.1...v0.0.2) (2026-03-13)
 
 
