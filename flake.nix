@@ -20,7 +20,7 @@
           inherit version;
           src = pkgs.lib.cleanSource ./.;
           subPackages = [ "cmd/sqlc-gen-queries" ];
-          vendorHash = pkgs.lib.fakeHash; # replace with real hash after running `nix build`
+          vendorHash = "sha256-cC+7vE2X1MM/vqFs4P7fpHN6UyLsesWpv1UwhJ4rYrE=";
           meta = with pkgs.lib; {
             description = "SQLC Queries Generator";
             license = licenses.mit;
@@ -30,10 +30,8 @@
 
         devShells.default = pkgs.mkShell {
           name = "sqlc-gen-queries";
-          packages = with pkgs; [
-            go
-            golangci-lint
-            gopls
+          packages = [
+            pkgs.go
           ];
         };
       }
