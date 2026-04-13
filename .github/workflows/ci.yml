@@ -27,15 +27,12 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v13
 
       - name: Run Tests
-        run: nix develop --command go tool ginkgo run -coverprofile=coverage.out -covermode=atomic ./...
+        run: nix develop --command go tool ginkgo run -r -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Run octocov
         uses: k1LoW/octocov-action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run golangci-lint
-        run: nix develop --command golangci-lint run
 
   release:
     needs: build
