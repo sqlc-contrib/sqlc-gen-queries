@@ -84,7 +84,7 @@ var _ = Describe("Catalog", func() {
 			Expect(fkAuthor.References.Columns).To(Equal([]string{"id"}))
 
 			// Verify expression-based indexes
-			Expect(postsTable.Indexes).To(HaveLen(2))
+			Expect(postsTable.Indexes).To(HaveLen(3))
 			exprIndex := postsTable.Indexes[1]
 			Expect(exprIndex.Name).To(Equal("idx_posts_title_expr"))
 			Expect(exprIndex.Parts).To(HaveLen(1))
@@ -143,14 +143,44 @@ var _ = Describe("Catalog", func() {
 
 			It("returns non-unique indexes", func() {
 				keys := postsTable.GetNonUniqueIndexes()
-				Expect(keys).To(HaveLen(1))
+				Expect(keys).To(HaveLen(2))
 				Expect(keys[0].Name).To(Equal("idx_posts_user_id"))
 				Expect(keys[0].Unique).To(BeFalse())
+				Expect(keys[1].Name).To(Equal("idx_posts_title"))
+				Expect(keys[1].Unique).To(BeFalse())
 			})
 
 			It("returns empty slice when there are no non-unique indexes", func() {
 				keys := usersTable.GetNonUniqueIndexes()
 				Expect(keys).To(BeEmpty())
+			})
+		})
+
+		Describe("IsForeignKeyIndex", func() {
+			var postsTable *sqlc.Table
+
+			BeforeEach(func() {
+				postsTable = &catalog.Schemas[0].Tables[1]
+			})
+
+			It("returns true when index columns match a foreign key", func() {
+				keys := postsTable.GetNonUniqueIndexes()
+				// idx_posts_user_id matches FK fk_posts_user_id
+				Expect(postsTable.IsForeignKeyIndex(keys[0])).To(BeTrue())
+			})
+
+			It("returns false when index columns do not match any foreign key", func() {
+				keys := postsTable.GetNonUniqueIndexes()
+				// idx_posts_title does not match any FK
+				Expect(postsTable.IsForeignKeyIndex(keys[1])).To(BeFalse())
+			})
+
+			It("returns false when table has no foreign keys", func() {
+				index := &sqlc.Index{
+					Name: "idx_test",
+					Parts: []sqlc.IndexPart{{Column: "email"}},
+				}
+				Expect(usersTable.IsForeignKeyIndex(index)).To(BeFalse())
 			})
 		})
 

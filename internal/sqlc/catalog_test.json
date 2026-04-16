@@ -133,6 +133,15 @@
                   "desc": false
                 }
               ]
+            },
+            {
+              "name": "idx_posts_title",
+              "unique": false,
+              "parts": [
+                {
+                  "column": "title"
+                }
+              ]
             }
           ]
         }

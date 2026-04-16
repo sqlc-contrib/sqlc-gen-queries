@@ -299,6 +299,7 @@ OFFSET
     sqlc.narg(page_offset)::int;
 
 {{range $idx, $key := .Table.GetNonUniqueIndexes}}{{- $query_name := printf "List%s%s" (table_name $.Table.Name "many") (query_index $key)}}
+{{- if or (is_fk_index $.Table $key) (should_include $ $query_name)}}
 
 -- List{{table_name $.Table.Name "many"}}{{query_index $key}} retrieves a paginated list of rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 --
@@ -338,6 +339,7 @@ LIMIT
     sqlc.narg(page_limit)::int
 OFFSET
     sqlc.narg(page_offset)::int;
+{{- end}}
 
 {{- $query_name := printf "Update%s%s" (table_name $.Table.Name "many") (query_index $key)}}
 {{- if should_include $ $query_name}}

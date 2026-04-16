@@ -71,6 +71,18 @@ var _ = Describe("Generator", func() {
 				// Opt-in queries are not present without config
 				Expect(string(content)).NotTo(ContainSubstring("name: CopyUsers :copyfrom"))
 			}
+
+			// Verify posts.sql FK-based list queries
+			for _, config := range generator.Config.SQL {
+				path := filepath.Join(config.Queries, "posts.sql")
+				content, err := os.ReadFile(path)
+				Expect(err).NotTo(HaveOccurred())
+
+				// FK-matching index list query is present by default
+				Expect(string(content)).To(ContainSubstring("name: ListPostsByUserId :many"))
+				// Non-FK index list query is not present without opt-in
+				Expect(string(content)).NotTo(ContainSubstring("name: ListPostsByTitle :many"))
+			}
 		})
 
 		When("the queries directory does not exist", func() {
@@ -106,6 +118,7 @@ var _ = Describe("Generator", func() {
 										Options: sqlc.CodegenOptions{
 											Queries: []string{
 												"CopyUsers",
+												"ListPostsByTitle",
 											},
 										},
 									},
@@ -137,6 +150,18 @@ var _ = Describe("Generator", func() {
 					// Opt-in queries that were listed are present
 					Expect(string(content)).To(ContainSubstring("name: CopyUsers :copyfrom"))
 				}
+
+				// Verify posts.sql opt-in list queries
+				for _, config := range generator.Config.SQL {
+					path := filepath.Join(config.Queries, "posts.sql")
+					content, err := os.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+
+					// FK-matching index list query is present by default
+					Expect(string(content)).To(ContainSubstring("name: ListPostsByUserId :many"))
+					// Non-FK index list query is present because it was opted in
+					Expect(string(content)).To(ContainSubstring("name: ListPostsByTitle :many"))
+				}
 			})
 
 			It("only generates default queries when queries is empty", func() {
@@ -159,6 +184,16 @@ var _ = Describe("Generator", func() {
 					// Opt-in queries are not present
 					Expect(string(content)).NotTo(ContainSubstring("name: CopyUsers :copyfrom"))
 				}
+
+				// Verify posts.sql FK-based list queries
+				for _, config := range generator.Config.SQL {
+					path := filepath.Join(config.Queries, "posts.sql")
+					content, err := os.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(string(content)).To(ContainSubstring("name: ListPostsByUserId :many"))
+					Expect(string(content)).NotTo(ContainSubstring("name: ListPostsByTitle :many"))
+				}
 			})
 
 			It("only generates default queries when codegen is nil", func() {
@@ -178,6 +213,16 @@ var _ = Describe("Generator", func() {
 					// Default List queries are present
 					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
 				}
+
+				// Verify posts.sql FK-based list queries
+				for _, config := range generator.Config.SQL {
+					path := filepath.Join(config.Queries, "posts.sql")
+					content, err := os.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(string(content)).To(ContainSubstring("name: ListPostsByUserId :many"))
+					Expect(string(content)).NotTo(ContainSubstring("name: ListPostsByTitle :many"))
+				}
 			})
 
 			It("handles non-existent query names gracefully", func() {
@@ -196,6 +241,16 @@ var _ = Describe("Generator", func() {
 
 					// Default List queries are still present
 					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
+				}
+
+				// Verify posts.sql FK-based list queries
+				for _, config := range generator.Config.SQL {
+					path := filepath.Join(config.Queries, "posts.sql")
+					content, err := os.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(string(content)).To(ContainSubstring("name: ListPostsByUserId :many"))
+					Expect(string(content)).NotTo(ContainSubstring("name: ListPostsByTitle :many"))
 				}
 			})
 		})

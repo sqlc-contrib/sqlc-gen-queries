@@ -150,6 +150,10 @@ func (x *Generator) Generate() error {
 			}
 			return ""
 		},
+		// Foreign key index check
+		"is_fk_index": func(table Table, index *Index) bool {
+			return table.IsForeignKeyIndex(index)
+		},
 		// Query include function for opt-in queries
 		"should_include": func(ctx Context, queryName string) bool {
 			return ctx.Queries[queryName]

@@ -143,6 +143,27 @@ func (x *Table) GetNonPrimaryKeyColumns() []Column {
 	return columns
 }
 
+// IsForeignKeyIndex checks if the given index's columns exactly match
+// any foreign key's columns on this table (order-independent).
+func (x *Table) IsForeignKeyIndex(index *Index) bool {
+	indexCols := make([]string, len(index.Parts))
+	for i, part := range index.Parts {
+		indexCols[i] = part.Column
+	}
+	slices.Sort(indexCols)
+
+	for _, fk := range x.ForeignKeys {
+		fkCols := make([]string, len(fk.Columns))
+		copy(fkCols, fk.Columns)
+		slices.Sort(fkCols)
+
+		if slices.Equal(indexCols, fkCols) {
+			return true
+		}
+	}
+	return false
+}
+
 // Column represents a table column with its name, data type, and nullability.
 type Column struct {
 	Name string `json:"name"`

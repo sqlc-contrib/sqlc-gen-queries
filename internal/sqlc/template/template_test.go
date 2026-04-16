@@ -24,6 +24,8 @@ var _ = Describe("Template", func() {
 			// Pagination Functions
 			"page_start": func(args ...any) string { return "" },
 			"page_order": func(args ...any) string { return "" },
+			// Foreign key index check
+			"is_fk_index": func(args ...any) bool { return false },
 			// Query include function
 			"should_include": func(args ...any) bool { return false },
 		}
