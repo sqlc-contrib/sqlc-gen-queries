@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.5...v0.1.0) (2026-04-16)
+
+
+### Features
+
+* distinguish foreign key indexes from other non-unique indexes ([00775d5](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/00775d5b34b4f35b1bc808275c5355c1bba4c9a8))
+
 ## [0.0.5](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.4...v0.0.5) (2026-04-16)
 
 
