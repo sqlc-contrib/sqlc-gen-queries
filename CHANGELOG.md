@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.4](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.3...v0.0.4) (2026-04-16)
+
+
+### Features
+
+* make list queries included by default ([d7104a8](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/d7104a83bb53103e608692c2d0a5e624e1faa0f6))
+
+
+### Bug Fixes
+
+* use full git history in build job for octocov to push coverage files ([4a64ffe](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/4a64ffef8cecc6a6605aed0e08234ae805da7711))
+
 ## [0.0.3](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.2...v0.0.3) (2026-03-17)
 
 
