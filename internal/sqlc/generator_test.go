@@ -65,8 +65,10 @@ var _ = Describe("Generator", func() {
 				Expect(string(content)).To(ContainSubstring("name: UpdateUser :one"))
 				Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
 
+				// Default List queries are present
+				Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
+
 				// Opt-in queries are not present without config
-				Expect(string(content)).NotTo(ContainSubstring("name: ListUsers :many"))
 				Expect(string(content)).NotTo(ContainSubstring("name: CopyUsers :copyfrom"))
 			}
 		})
@@ -103,7 +105,6 @@ var _ = Describe("Generator", func() {
 										Out:    dir,
 										Options: sqlc.CodegenOptions{
 											Queries: []string{
-												"ListUsers",
 												"CopyUsers",
 											},
 										},
@@ -130,8 +131,10 @@ var _ = Describe("Generator", func() {
 					Expect(string(content)).To(ContainSubstring("name: UpdateUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
 
-					// Opt-in queries that were listed are present
+					// Default List queries are present
 					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
+
+					// Opt-in queries that were listed are present
 					Expect(string(content)).To(ContainSubstring("name: CopyUsers :copyfrom"))
 				}
 			})
@@ -150,8 +153,10 @@ var _ = Describe("Generator", func() {
 					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
 
+					// Default List queries are present
+					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
+
 					// Opt-in queries are not present
-					Expect(string(content)).NotTo(ContainSubstring("name: ListUsers :many"))
 					Expect(string(content)).NotTo(ContainSubstring("name: CopyUsers :copyfrom"))
 				}
 			})
@@ -170,8 +175,8 @@ var _ = Describe("Generator", func() {
 					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
 
-					// Opt-in queries are not present
-					Expect(string(content)).NotTo(ContainSubstring("name: ListUsers :many"))
+					// Default List queries are present
+					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
 				}
 			})
 
@@ -189,8 +194,8 @@ var _ = Describe("Generator", func() {
 					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
 
-					// Non-existent opt-in queries don't cause errors
-					Expect(string(content)).NotTo(ContainSubstring("name: ListUsers :many"))
+					// Default List queries are still present
+					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
 				}
 			})
 		})

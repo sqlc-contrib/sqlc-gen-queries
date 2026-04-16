@@ -24,8 +24,8 @@ var _ = Describe("Config", func() {
 			Expect(config.SQL[0].Codegen[0].Plugin).To(Equal("gen-queries"))
 			Expect(config.SQL[0].Codegen[0].Out).To(Equal("ent/query"))
 			opts := config.SQL[0].GetOptions()
-			Expect(opts.Queries).To(HaveLen(3))
-			Expect(opts.Queries).To(ContainElements("ListUsers", "CopyUsers", "GetUserByEmail"))
+			Expect(opts.Queries).To(HaveLen(2))
+			Expect(opts.Queries).To(ContainElements("CopyUsers", "GetUserByEmail"))
 		})
 
 		When("the file does not exist", func() {

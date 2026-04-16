@@ -12,6 +12,5 @@ sql:
         out: "ent/query"
         options:
           queries:
-            - "ListUsers"
             - "CopyUsers"
             - "GetUserByEmail"
