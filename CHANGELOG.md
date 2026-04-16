@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.5](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.4...v0.0.5) (2026-04-16)
+
+
+### Bug Fixes
+
+* update nix vendorHash for changed go dependencies ([0efbf12](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/0efbf12a74820d3c20a908f4e92dc592fa894a31))
+
 ## [0.0.4](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.3...v0.0.4) (2026-04-16)
 
 
