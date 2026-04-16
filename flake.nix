@@ -20,7 +20,7 @@
           inherit version;
           src = pkgs.lib.cleanSource ./.;
           subPackages = [ "cmd/sqlc-gen-queries" ];
-          vendorHash = "sha256-cC+7vE2X1MM/vqFs4P7fpHN6UyLsesWpv1UwhJ4rYrE=";
+          vendorHash = "sha256-XyCIXLDH378M+MDyNj0OiBU7bilbF7DzEpA85fNOCGE=";
           meta = with pkgs.lib; {
             description = "SQLC Queries Generator";
             license = licenses.mit;
