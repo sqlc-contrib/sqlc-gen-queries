@@ -21,6 +21,10 @@
           src = pkgs.lib.cleanSource ./.;
           subPackages = [ "cmd/sqlc-gen-queries" ];
           vendorHash = "sha256-XyCIXLDH378M+MDyNj0OiBU7bilbF7DzEpA85fNOCGE=";
+          doInstallCheck = true;
+          installCheckPhase = ''
+            $out/bin/sqlc-gen-queries --help
+          '';
           meta = with pkgs.lib; {
             description = "SQLC Queries Generator";
             license = licenses.mit;

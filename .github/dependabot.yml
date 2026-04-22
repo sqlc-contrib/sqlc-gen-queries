@@ -6,6 +6,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      all-go-deps:
+        patterns: ["*"]
     labels:
       - "dependencies"
       - "go"
@@ -19,6 +22,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      all-actions:
+        patterns: ["*"]
     labels:
       - "dependencies"
       - "github-actions"
