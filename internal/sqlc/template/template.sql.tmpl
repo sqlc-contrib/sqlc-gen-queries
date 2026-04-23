@@ -267,78 +267,61 @@ INSERT INTO {{.Table.Name}} (
 
 -- List{{table_name .Table.Name "many"}} retrieves a paginated list of rows from '{{$.Table.Name}}'.
 --
--- Filtering:
---   The 'filter' parameter enables dynamic WHERE clauses for flexible querying.
---   Pass NULL for no filtering, or use a query builder (e.g., pgxmql.WhereClause)
---   to construct runtime conditions. The void type cast allows query rewriting.
---   Example: filter can add conditions like "status = 'active' AND created_at > '2024-01-01'"
+-- Filtering, cursor, and ordering:
+--   The commented markers in WHERE and ORDER BY are placeholders for a runtime
+--   query rewriter (e.g. sqlc-gen-template) to substitute cursor, filter, and
+--   order expressions. When left unreplaced they remain SQL comments, so the
+--   query returns all rows ordered by primary key.
 --
--- Pagination:
---   Cursor-based: Use page_start (ID of last item from previous page) + page_limit.
---                 Returns items AFTER the cursor. Set page_start to the last item's ID from current page as next cursor.
---   Offset-based: Use page_offset + page_limit for traditional page number pagination.
+-- Offset pagination:
+--   Use offset + limit for traditional page number pagination.
 -- name: {{$query_name}} :many
 SELECT
     *
 FROM
     {{$.Table.Name}}
-{{- $page_start := page_start $.Table}}
-{{- $page_order := page_order $.Table}}
 WHERE
-    sqlc.narg(filter)::void IS NULL
-    {{- if $page_start}}
-    AND {{$page_start}}
-    {{- end}}
-{{- if $page_order}}
+    /* query.cursor AND */ /* query.filter AND */ TRUE
+{{- $query_order := query_order $.Table}}
+{{- if $query_order}}
 ORDER BY
-    {{$page_order}}
+    /* query.order , */ {{$query_order}}
 {{- end}}
 LIMIT
-    sqlc.narg(page_limit)::int
+    sqlc.narg(limit)::int
 OFFSET
-    sqlc.narg(page_offset)::int;
+    sqlc.narg(offset)::int;
 
 {{range $idx, $key := .Table.GetNonUniqueIndexes}}{{- $query_name := printf "List%s%s" (table_name $.Table.Name "many") (query_index $key)}}
 {{- if or (is_fk_index $.Table $key) (should_include $ $query_name)}}
 
 -- List{{table_name $.Table.Name "many"}}{{query_index $key}} retrieves a paginated list of rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 --
--- Filtering:
---   The 'filter' parameter enables dynamic WHERE clauses for flexible querying.
---   Pass NULL for no filtering, or use a query builder (e.g., pgxmql.WhereClause)
---   to construct runtime conditions. The void type cast allows query rewriting.
---   Example: filter can add conditions like "status = 'active' AND created_at > '2024-01-01'"
+-- Filtering, cursor, and ordering:
+--   The commented markers in WHERE and ORDER BY are placeholders for a runtime
+--   query rewriter (e.g. sqlc-gen-template) to substitute cursor, filter, and
+--   order expressions. When left unreplaced they remain SQL comments, so the
+--   query returns all matching rows ordered by primary key.
 --
--- Pagination:
---   Cursor-based: Use page_start (ID of last item from previous page) + page_limit.
---                 Returns items AFTER the cursor. Set page_start to the last item's ID from current page as next cursor.
---   Offset-based: Use page_offset + page_limit for traditional page number pagination.
+-- Offset pagination:
+--   Use offset + limit for traditional page number pagination.
 -- name: {{$query_name}} :many
 SELECT
     *
 FROM
     {{$.Table.Name}}
 {{- $condition := query_condition $.Table $key}}
-{{- $page_start := page_start $.Table}}
-{{- $page_order := page_order $.Table}}
-{{- if $condition}}
 WHERE
-    {{$condition}}
-    {{- if $page_start}}
-    AND {{$page_start}}
-    {{- end}}
-{{- else if $page_start}}
-WHERE
-    {{$page_start}}
-{{- end}}
-{{- if $page_order}}
+    /* query.cursor AND */ /* query.filter AND */ {{if $condition}}{{$condition}}{{else}}TRUE{{end}}
+{{- $query_order := query_order $.Table}}
+{{- if $query_order}}
 ORDER BY
-    {{$page_order}}
+    /* query.order , */ {{$query_order}}
 {{- end}}
 LIMIT
-    sqlc.narg(page_limit)::int
+    sqlc.narg(limit)::int
 OFFSET
-    sqlc.narg(page_offset)::int;
+    sqlc.narg(offset)::int;
 {{- end}}
 
 {{- $query_name := printf "Update%s%s" (table_name $.Table.Name "many") (query_index $key)}}
