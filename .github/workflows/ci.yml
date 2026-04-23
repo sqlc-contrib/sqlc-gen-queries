@@ -35,7 +35,7 @@ jobs:
           nix develop --command go tool ginkgo run -r \
             -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Run octocov
+      - name: Run Octocov
         uses: k1LoW/octocov-action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
