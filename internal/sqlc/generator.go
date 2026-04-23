@@ -110,6 +110,12 @@ func (x *Generator) Generate() error {
 			}
 			return condition.String()
 		},
+		"query_argument": func(column Column) string {
+			argument := Argument{
+				Column: &column,
+			}
+			return argument.String()
+		},
 		"query_index": func(index *Index) string {
 			// Don't add suffix for primary key lookups
 			if index.Name == "primary key" {
@@ -123,32 +129,16 @@ func (x *Generator) Generate() error {
 			}
 			return "By" + strings.Join(items, "And")
 		},
-		"query_argument": func(column Column) string {
-			argument := Argument{
-				Column: &column,
-			}
-			return argument.String()
-		},
 		// Pagination functions
-		"page_start": func(table Table) string {
-			if table.PrimaryKey != nil && len(table.PrimaryKey.Parts) > 0 {
-				argument := &Argument{
-					Column: &Column{
-						Name: "page_start",
-						Type: "text",
-						Null: true,
-					},
-				}
-				column := table.PrimaryKey.Parts[0].Column
-				return fmt.Sprintf("(%v::text IS NULL OR %s::text > %v::text)", argument, column, argument)
+		"query_order": func(table Table) string {
+			if table.PrimaryKey == nil {
+				return ""
 			}
-			return ""
-		},
-		"page_order": func(table Table) string {
-			if table.PrimaryKey != nil && len(table.PrimaryKey.Parts) > 0 {
-				return table.PrimaryKey.Parts[0].Column
+			cols := make([]string, 0, len(table.PrimaryKey.Parts))
+			for _, p := range table.PrimaryKey.Parts {
+				cols = append(cols, p.Column)
 			}
-			return ""
+			return strings.Join(cols, ", ")
 		},
 		// Foreign key index check
 		"is_fk_index": func(table Table, index *Index) bool {
