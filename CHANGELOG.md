@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.1.0...v0.2.0) (2026-04-24)
+
+
+### Features
+
+* rewrite list queries with comment-marker placeholders ([4026f85](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/4026f85eeb08cca7775a337c07dda8e8fca033a7))
+
 ## [0.1.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.0.5...v0.1.0) (2026-04-16)
 
 
