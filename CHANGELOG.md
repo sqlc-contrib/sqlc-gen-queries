@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.2.0...v0.2.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* rename limit/offset narg args to take/skip ([bc21237](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/bc21237e6c52a0a0aa32e6d6b6d2951d85c1b11a))
+
 ## [0.2.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.1.0...v0.2.0) (2026-04-24)
 
 
