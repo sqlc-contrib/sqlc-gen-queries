@@ -267,10 +267,10 @@ INSERT INTO {{.Table.Name}} (
 
 -- List{{table_name .Table.Name "many"}} retrieves a paginated list of rows from '{{$.Table.Name}}'.
 --
--- Filtering, cursor, and ordering:
+-- Filtering and ordering:
 --   The commented markers in WHERE and ORDER BY are placeholders for a runtime
---   query rewriter (e.g. sqlc-gen-template) to substitute cursor, filter, and
---   order expressions. When left unreplaced they remain SQL comments, so the
+--   query rewriter (e.g. sqlc-gen-template) to substitute filter and order
+--   expressions. When left unreplaced they remain SQL comments, so the
 --   query returns all rows ordered by primary key.
 --
 -- Offset pagination:
@@ -281,11 +281,11 @@ SELECT
 FROM
     {{$.Table.Name}}
 WHERE
-    /* query.cursor AND */ /* query.filter AND */ TRUE
+    /* query.where AND */ TRUE
 {{- $query_order := query_order $.Table}}
 {{- if $query_order}}
 ORDER BY
-    /* query.order , */ {{$query_order}}
+    /* query.order_by , */ {{$query_order}}  -- PK tie-breaker; keyset stability
 {{- end}}
 LIMIT
     sqlc.narg(take)::int
@@ -297,10 +297,10 @@ OFFSET
 
 -- List{{table_name $.Table.Name "many"}}{{query_index $key}} retrieves a paginated list of rows from '{{$.Table.Name}}'{{if $key.Name}} filtered by {{$key.Name}}{{end}}.
 --
--- Filtering, cursor, and ordering:
+-- Filtering and ordering:
 --   The commented markers in WHERE and ORDER BY are placeholders for a runtime
---   query rewriter (e.g. sqlc-gen-template) to substitute cursor, filter, and
---   order expressions. When left unreplaced they remain SQL comments, so the
+--   query rewriter (e.g. sqlc-gen-template) to substitute filter and order
+--   expressions. When left unreplaced they remain SQL comments, so the
 --   query returns all matching rows ordered by primary key.
 --
 -- Offset pagination:
@@ -312,11 +312,11 @@ FROM
     {{$.Table.Name}}
 {{- $condition := query_condition $.Table $key}}
 WHERE
-    /* query.cursor AND */ /* query.filter AND */ {{if $condition}}{{$condition}}{{else}}TRUE{{end}}
+    /* query.where AND */ {{if $condition}}{{$condition}}{{else}}TRUE{{end}}
 {{- $query_order := query_order $.Table}}
 {{- if $query_order}}
 ORDER BY
-    /* query.order , */ {{$query_order}}
+    /* query.order_by , */ {{$query_order}}  -- PK tie-breaker; keyset stability
 {{- end}}
 LIMIT
     sqlc.narg(take)::int
