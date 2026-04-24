@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.2.1...v0.2.2) (2026-04-24)
+
+
+### Bug Fixes
+
+* clarify list query comment markers and add stability notes ([17dc9c9](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/17dc9c9c43e8a98c81ef6cd2a267c1e1e4abc2bc))
+
 ## [0.2.1](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.2.0...v0.2.1) (2026-04-24)
 
 
