@@ -288,9 +288,9 @@ ORDER BY
     /* query.order , */ {{$query_order}}
 {{- end}}
 LIMIT
-    sqlc.narg(limit)::int
+    sqlc.narg(take)::int
 OFFSET
-    sqlc.narg(offset)::int;
+    sqlc.narg(skip)::int;
 
 {{range $idx, $key := .Table.GetNonUniqueIndexes}}{{- $query_name := printf "List%s%s" (table_name $.Table.Name "many") (query_index $key)}}
 {{- if or (is_fk_index $.Table $key) (should_include $ $query_name)}}
@@ -319,9 +319,9 @@ ORDER BY
     /* query.order , */ {{$query_order}}
 {{- end}}
 LIMIT
-    sqlc.narg(limit)::int
+    sqlc.narg(take)::int
 OFFSET
-    sqlc.narg(offset)::int;
+    sqlc.narg(skip)::int;
 {{- end}}
 
 {{- $query_name := printf "Update%s%s" (table_name $.Table.Name "many") (query_index $key)}}
