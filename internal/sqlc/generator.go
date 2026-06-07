@@ -162,9 +162,14 @@ func (x *Generator) Generate() error {
 		}
 
 		queries := config.GetQueriesSet()
+		exclude := config.GetExcludeSet()
 
 		for _, schema := range x.Catalog.Schemas {
 			for _, table := range schema.Tables {
+				if tableExcluded(exclude, schema.Name, table.Name) {
+					continue
+				}
+
 				file, err := os.Create(
 					filepath.Join(config.Queries,
 						fmt.Sprintf("%s.sql", table.Name)),

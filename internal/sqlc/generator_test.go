@@ -49,6 +49,27 @@ var _ = Describe("Generator", func() {
 			}
 		})
 
+		It("skips excluded tables", func() {
+			dir := generator.Config.SQL[0].Queries
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{
+				{
+					Plugin: "gen-queries",
+					Out:    dir,
+					Options: sqlc.CodegenOptions{
+						Exclude: []string{"public.posts"},
+						Queries: []string{"ListPostsByTitle"},
+					},
+				},
+			}
+
+			Expect(generator.Generate()).NotTo(HaveOccurred())
+
+			for _, config := range generator.Config.SQL {
+				Expect(filepath.Join(config.Queries, "users.sql")).To(BeAnExistingFile())
+				Expect(filepath.Join(config.Queries, "posts.sql")).NotTo(BeAnExistingFile())
+			}
+		})
+
 		It("generates valid SQL content with default PK queries", func() {
 			err := generator.Generate()
 			Expect(err).NotTo(HaveOccurred())

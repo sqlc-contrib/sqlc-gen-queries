@@ -11,6 +11,8 @@ sql:
       - plugin: gen-queries
         out: "ent/query"
         options:
+          exclude:
+            - "posts"
           queries:
             - "CopyUsers"
             - "GetUserByEmail"

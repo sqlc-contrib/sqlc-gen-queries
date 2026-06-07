@@ -26,6 +26,7 @@ var _ = Describe("Config", func() {
 			opts := config.SQL[0].GetOptions()
 			Expect(opts.Queries).To(HaveLen(2))
 			Expect(opts.Queries).To(ContainElements("CopyUsers", "GetUserByEmail"))
+			Expect(opts.Exclude).To(ContainElement("posts"))
 		})
 
 		When("the file does not exist", func() {
@@ -50,6 +51,7 @@ var _ = Describe("Config", func() {
 			sql := sqlc.SQL{}
 			opts := sql.GetOptions()
 			Expect(opts.Queries).To(BeNil())
+			Expect(opts.Exclude).To(BeNil())
 		})
 
 		It("returns empty options when no matching plugin", func() {
@@ -60,6 +62,7 @@ var _ = Describe("Config", func() {
 			}
 			opts := sql.GetOptions()
 			Expect(opts.Queries).To(BeNil())
+			Expect(opts.Exclude).To(BeNil())
 		})
 
 		It("returns options for the gen-queries plugin", func() {
@@ -70,6 +73,7 @@ var _ = Describe("Config", func() {
 						Out:    "ent/query",
 						Options: sqlc.CodegenOptions{
 							Queries: []string{"ListUsers", "CopyUsers"},
+							Exclude: []string{"audit_logs"},
 						},
 					},
 				},
@@ -77,6 +81,7 @@ var _ = Describe("Config", func() {
 			opts := sql.GetOptions()
 			Expect(opts.Queries).To(HaveLen(2))
 			Expect(opts.Queries).To(ContainElements("ListUsers", "CopyUsers"))
+			Expect(opts.Exclude).To(ContainElement("audit_logs"))
 		})
 	})
 
@@ -140,6 +145,49 @@ var _ = Describe("Config", func() {
 			Expect(exists).To(BeTrue())
 			_, exists = querySet["NonExistent"]
 			Expect(exists).To(BeFalse())
+		})
+	})
+
+	Describe("SQL.GetExcludeSet", func() {
+		It("returns an empty map when codegen is nil", func() {
+			sql := sqlc.SQL{}
+			excludeSet := sql.GetExcludeSet()
+			Expect(excludeSet).NotTo(BeNil())
+			Expect(excludeSet).To(BeEmpty())
+		})
+
+		It("returns an empty map when exclude is empty", func() {
+			sql := sqlc.SQL{
+				Codegen: []sqlc.Codegen{
+					{
+						Plugin:  "gen-queries",
+						Out:     "out",
+						Options: sqlc.CodegenOptions{Exclude: []string{}},
+					},
+				},
+			}
+			excludeSet := sql.GetExcludeSet()
+			Expect(excludeSet).NotTo(BeNil())
+			Expect(excludeSet).To(BeEmpty())
+		})
+
+		It("returns a map with excluded table names", func() {
+			sql := sqlc.SQL{
+				Codegen: []sqlc.Codegen{
+					{
+						Plugin: "gen-queries",
+						Out:    "out",
+						Options: sqlc.CodegenOptions{
+							Exclude: []string{"users", "analytics.events"},
+						},
+					},
+				},
+			}
+			excludeSet := sql.GetExcludeSet()
+			Expect(excludeSet).To(HaveLen(2))
+			Expect(excludeSet["users"]).To(BeTrue())
+			Expect(excludeSet["analytics.events"]).To(BeTrue())
+			Expect(excludeSet["posts"]).To(BeFalse())
 		})
 	})
 })

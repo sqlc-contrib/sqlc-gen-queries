@@ -59,10 +59,17 @@ sql:
       - plugin: gen-queries
         out: "ent/query"
         options:
+          exclude:
+            - "audit_logs"
+            - "auth.sessions"
           queries:
             - "CopyUsers"
             - "GetUserWithPost"
 ```
+
+Use `options.exclude` to skip generating query files for tables that should not
+be managed by sqlc. Entries may be table names (`audit_logs`) or
+schema-qualified table names (`auth.sessions`).
 
 ### Default queries (always generated)
 
