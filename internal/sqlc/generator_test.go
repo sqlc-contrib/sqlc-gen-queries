@@ -56,7 +56,7 @@ var _ = Describe("Generator", func() {
 					Plugin: "gen-queries",
 					Out:    dir,
 					Options: sqlc.CodegenOptions{
-						Exclude: []string{"public.posts"},
+						Tables:  sqlc.TableOptions{Exclude: []string{"public.posts"}},
 						Queries: []string{"ListPostsByTitle"},
 					},
 				},

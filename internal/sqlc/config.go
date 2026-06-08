@@ -71,7 +71,12 @@ type Codegen struct {
 
 // CodegenOptions holds plugin-specific options for the gen-queries plugin.
 type CodegenOptions struct {
-	Queries []string `yaml:"queries,omitempty"`
+	Queries []string     `yaml:"queries,omitempty"`
+	Tables  TableOptions `yaml:"tables,omitempty"`
+}
+
+// TableOptions holds table-level filtering options for the gen-queries plugin.
+type TableOptions struct {
 	Exclude []string `yaml:"exclude,omitempty"`
 }
 
@@ -101,8 +106,8 @@ func (s *SQL) GetQueriesSet() map[string]bool {
 // Entries may be unqualified table names or schema-qualified names.
 func (s *SQL) GetExcludeSet() map[string]bool {
 	opts := s.GetOptions()
-	excludeSet := make(map[string]bool, len(opts.Exclude))
-	for _, name := range opts.Exclude {
+	excludeSet := make(map[string]bool, len(opts.Tables.Exclude))
+	for _, name := range opts.Tables.Exclude {
 		excludeSet[name] = true
 	}
 	return excludeSet

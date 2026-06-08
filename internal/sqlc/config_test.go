@@ -26,7 +26,7 @@ var _ = Describe("Config", func() {
 			opts := config.SQL[0].GetOptions()
 			Expect(opts.Queries).To(HaveLen(2))
 			Expect(opts.Queries).To(ContainElements("CopyUsers", "GetUserByEmail"))
-			Expect(opts.Exclude).To(ContainElement("posts"))
+			Expect(opts.Tables.Exclude).To(ContainElement("posts"))
 		})
 
 		When("the file does not exist", func() {
@@ -51,7 +51,7 @@ var _ = Describe("Config", func() {
 			sql := sqlc.SQL{}
 			opts := sql.GetOptions()
 			Expect(opts.Queries).To(BeNil())
-			Expect(opts.Exclude).To(BeNil())
+			Expect(opts.Tables.Exclude).To(BeNil())
 		})
 
 		It("returns empty options when no matching plugin", func() {
@@ -62,7 +62,7 @@ var _ = Describe("Config", func() {
 			}
 			opts := sql.GetOptions()
 			Expect(opts.Queries).To(BeNil())
-			Expect(opts.Exclude).To(BeNil())
+			Expect(opts.Tables.Exclude).To(BeNil())
 		})
 
 		It("returns options for the gen-queries plugin", func() {
@@ -73,7 +73,7 @@ var _ = Describe("Config", func() {
 						Out:    "ent/query",
 						Options: sqlc.CodegenOptions{
 							Queries: []string{"ListUsers", "CopyUsers"},
-							Exclude: []string{"audit_logs"},
+							Tables:  sqlc.TableOptions{Exclude: []string{"audit_logs"}},
 						},
 					},
 				},
@@ -81,7 +81,7 @@ var _ = Describe("Config", func() {
 			opts := sql.GetOptions()
 			Expect(opts.Queries).To(HaveLen(2))
 			Expect(opts.Queries).To(ContainElements("ListUsers", "CopyUsers"))
-			Expect(opts.Exclude).To(ContainElement("audit_logs"))
+			Expect(opts.Tables.Exclude).To(ContainElement("audit_logs"))
 		})
 	})
 
@@ -162,7 +162,7 @@ var _ = Describe("Config", func() {
 					{
 						Plugin:  "gen-queries",
 						Out:     "out",
-						Options: sqlc.CodegenOptions{Exclude: []string{}},
+						Options: sqlc.CodegenOptions{Tables: sqlc.TableOptions{Exclude: []string{}}},
 					},
 				},
 			}
@@ -178,7 +178,7 @@ var _ = Describe("Config", func() {
 						Plugin: "gen-queries",
 						Out:    "out",
 						Options: sqlc.CodegenOptions{
-							Exclude: []string{"users", "analytics.events"},
+							Tables: sqlc.TableOptions{Exclude: []string{"users", "analytics.events"}},
 						},
 					},
 				},
