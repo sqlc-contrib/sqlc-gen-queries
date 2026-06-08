@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.2.3...v0.2.4) (2026-06-08)
+
+
+### Bug Fixes
+
+* **flake:** refresh vendorHash after gomod bumps ([96299d5](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/96299d5f10acaba8bb3bc077896e035b6b1053ac))
+
 ## [0.2.3](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.2.2...v0.2.3) (2026-05-05)
 
 
