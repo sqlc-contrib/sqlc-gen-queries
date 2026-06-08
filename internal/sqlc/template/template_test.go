@@ -25,8 +25,8 @@ var _ = Describe("Template", func() {
 			"query_order": func(args ...any) string { return "" },
 			// Foreign key index check
 			"is_fk_index": func(args ...any) bool { return false },
-			// Query include function
-			"should_include": func(args ...any) bool { return false },
+			// Query selection function
+			"should_generate": func(args ...any) bool { return false },
 		}
 
 		It("opens and parses template successfully", func() {

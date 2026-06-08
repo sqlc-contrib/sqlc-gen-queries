@@ -24,8 +24,8 @@ var _ = Describe("Config", func() {
 			Expect(config.SQL[0].Codegen[0].Plugin).To(Equal("gen-queries"))
 			Expect(config.SQL[0].Codegen[0].Out).To(Equal("ent/query"))
 			opts := config.SQL[0].GetOptions()
-			Expect(opts.Queries).To(HaveLen(2))
-			Expect(opts.Queries).To(ContainElements("CopyUsers", "GetUserByEmail"))
+			Expect(opts.Queries.Include).To(HaveLen(2))
+			Expect(opts.Queries.Include).To(ContainElements("CopyUsers", "GetUserByEmail"))
 			Expect(opts.Tables.Exclude).To(ContainElement("posts"))
 		})
 
@@ -50,7 +50,7 @@ var _ = Describe("Config", func() {
 		It("returns empty options when codegen is nil", func() {
 			sql := sqlc.SQL{}
 			opts := sql.GetOptions()
-			Expect(opts.Queries).To(BeNil())
+			Expect(opts.Queries.Include).To(BeNil())
 			Expect(opts.Tables.Exclude).To(BeNil())
 		})
 
@@ -61,7 +61,7 @@ var _ = Describe("Config", func() {
 				},
 			}
 			opts := sql.GetOptions()
-			Expect(opts.Queries).To(BeNil())
+			Expect(opts.Queries.Include).To(BeNil())
 			Expect(opts.Tables.Exclude).To(BeNil())
 		})
 
@@ -72,38 +72,38 @@ var _ = Describe("Config", func() {
 						Plugin: "gen-queries",
 						Out:    "ent/query",
 						Options: sqlc.CodegenOptions{
-							Queries: []string{"ListUsers", "CopyUsers"},
+							Queries: sqlc.QueryOptions{Include: []string{"ListUsers", "CopyUsers"}},
 							Tables:  sqlc.TableOptions{Exclude: []string{"audit_logs"}},
 						},
 					},
 				},
 			}
 			opts := sql.GetOptions()
-			Expect(opts.Queries).To(HaveLen(2))
-			Expect(opts.Queries).To(ContainElements("ListUsers", "CopyUsers"))
+			Expect(opts.Queries.Include).To(HaveLen(2))
+			Expect(opts.Queries.Include).To(ContainElements("ListUsers", "CopyUsers"))
 			Expect(opts.Tables.Exclude).To(ContainElement("audit_logs"))
 		})
 	})
 
-	Describe("SQL.GetQueriesSet", func() {
+	Describe("SQL.GetQueryIncludeSet", func() {
 		It("returns an empty map when codegen is nil", func() {
 			sql := sqlc.SQL{}
-			querySet := sql.GetQueriesSet()
+			querySet := sql.GetQueryIncludeSet()
 			Expect(querySet).NotTo(BeNil())
 			Expect(querySet).To(BeEmpty())
 		})
 
-		It("returns an empty map when queries is empty", func() {
+		It("returns an empty map when include is empty", func() {
 			sql := sqlc.SQL{
 				Codegen: []sqlc.Codegen{
 					{
 						Plugin:  "gen-queries",
 						Out:     "ent/query",
-						Options: sqlc.CodegenOptions{Queries: []string{}},
+						Options: sqlc.CodegenOptions{Queries: sqlc.QueryOptions{Include: []string{}}},
 					},
 				},
 			}
-			querySet := sql.GetQueriesSet()
+			querySet := sql.GetQueryIncludeSet()
 			Expect(querySet).NotTo(BeNil())
 			Expect(querySet).To(BeEmpty())
 		})
@@ -115,36 +115,45 @@ var _ = Describe("Config", func() {
 						Plugin: "gen-queries",
 						Out:    "ent/query",
 						Options: sqlc.CodegenOptions{
-							Queries: []string{"ListUsers", "CopyUsers", "GetUserByEmail"},
+							Queries: sqlc.QueryOptions{Include: []string{"ListUsers", "CopyUsers", "GetUserByEmail"}},
 						},
 					},
 				},
 			}
-			querySet := sql.GetQueriesSet()
+			querySet := sql.GetQueryIncludeSet()
 			Expect(querySet).To(HaveLen(3))
 			Expect(querySet["ListUsers"]).To(BeTrue())
 			Expect(querySet["CopyUsers"]).To(BeTrue())
 			Expect(querySet["GetUserByEmail"]).To(BeTrue())
 			Expect(querySet["OtherQuery"]).To(BeFalse())
 		})
+	})
 
-		It("provides O(1) lookup", func() {
+	Describe("SQL.GetQueryExcludeSet", func() {
+		It("returns an empty map when codegen is nil", func() {
+			sql := sqlc.SQL{}
+			querySet := sql.GetQueryExcludeSet()
+			Expect(querySet).NotTo(BeNil())
+			Expect(querySet).To(BeEmpty())
+		})
+
+		It("returns a map with excluded query names", func() {
 			sql := sqlc.SQL{
 				Codegen: []sqlc.Codegen{
 					{
 						Plugin: "gen-queries",
 						Out:    "ent/query",
 						Options: sqlc.CodegenOptions{
-							Queries: []string{"Query1", "Query2", "Query3"},
+							Queries: sqlc.QueryOptions{Exclude: []string{"DeleteUser", "BatchDeleteUsers"}},
 						},
 					},
 				},
 			}
-			querySet := sql.GetQueriesSet()
-			_, exists := querySet["Query2"]
-			Expect(exists).To(BeTrue())
-			_, exists = querySet["NonExistent"]
-			Expect(exists).To(BeFalse())
+			querySet := sql.GetQueryExcludeSet()
+			Expect(querySet).To(HaveLen(2))
+			Expect(querySet["DeleteUser"]).To(BeTrue())
+			Expect(querySet["BatchDeleteUsers"]).To(BeTrue())
+			Expect(querySet["GetUser"]).To(BeFalse())
 		})
 	})
 

@@ -15,5 +15,6 @@ sql:
             exclude:
               - "posts"
           queries:
-            - "CopyUsers"
-            - "GetUserByEmail"
+            include:
+              - "CopyUsers"
+              - "GetUserByEmail"

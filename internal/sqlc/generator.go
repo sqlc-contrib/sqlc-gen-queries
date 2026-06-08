@@ -30,10 +30,11 @@ type Generator struct {
 func (x *Generator) Generate() error {
 	// Context holds data for template execution
 	type Context struct {
-		Engine  string
-		Schema  string
-		Table   *Table
-		Queries map[string]bool
+		Engine       string
+		Schema       string
+		Table        *Table
+		QueryInclude map[string]bool
+		QueryExclude map[string]bool
 	}
 
 	opts := map[string]any{
@@ -144,9 +145,13 @@ func (x *Generator) Generate() error {
 		"is_fk_index": func(table Table, index *Index) bool {
 			return table.IsForeignKeyIndex(index)
 		},
-		// Query include function for opt-in queries
-		"should_include": func(ctx Context, queryName string) bool {
-			return ctx.Queries[queryName]
+		// Query selection: a query renders when it belongs to the default set
+		// or is explicitly included, and never when excluded (exclude wins).
+		"should_generate": func(ctx Context, queryName string, isDefault bool) bool {
+			if ctx.QueryExclude[queryName] {
+				return false
+			}
+			return isDefault || ctx.QueryInclude[queryName]
 		},
 	}
 
@@ -161,7 +166,8 @@ func (x *Generator) Generate() error {
 			return err
 		}
 
-		queries := config.GetQueriesSet()
+		queryInclude := config.GetQueryIncludeSet()
+		queryExclude := config.GetQueryExcludeSet()
 		include := config.GetIncludeSet()
 		exclude := config.GetExcludeSet()
 
@@ -182,10 +188,11 @@ func (x *Generator) Generate() error {
 				defer file.Close()
 
 				ctx := Context{
-					Engine:  config.Engine,
-					Schema:  schema.Name,
-					Table:   &table,
-					Queries: queries,
+					Engine:       config.Engine,
+					Schema:       schema.Name,
+					Table:        &table,
+					QueryInclude: queryInclude,
+					QueryExclude: queryExclude,
 				}
 				// Execute template into buffer, then squeeze blank lines
 				var buffer bytes.Buffer

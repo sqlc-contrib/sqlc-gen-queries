@@ -56,8 +56,7 @@ var _ = Describe("Generator", func() {
 					Plugin: "gen-queries",
 					Out:    dir,
 					Options: sqlc.CodegenOptions{
-						Tables:  sqlc.TableOptions{Exclude: []string{"public.posts"}},
-						Queries: []string{"ListPostsByTitle"},
+						Tables: sqlc.TableOptions{Exclude: []string{"public.posts"}},
 					},
 				},
 			}
@@ -149,6 +148,89 @@ var _ = Describe("Generator", func() {
 			}
 		})
 
+		It("adds included opt-in queries on top of the defaults", func() {
+			dir := generator.Config.SQL[0].Queries
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{
+				{
+					Plugin: "gen-queries",
+					Out:    dir,
+					Options: sqlc.CodegenOptions{
+						Queries: sqlc.QueryOptions{Include: []string{"CopyUsers"}},
+					},
+				},
+			}
+
+			Expect(generator.Generate()).NotTo(HaveOccurred())
+
+			for _, config := range generator.Config.SQL {
+				content, err := os.ReadFile(filepath.Join(config.Queries, "users.sql"))
+				Expect(err).NotTo(HaveOccurred())
+
+				// The default set remains
+				Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
+				Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
+				Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
+
+				// The included opt-in query is added on top
+				Expect(string(content)).To(ContainSubstring("name: CopyUsers :copyfrom"))
+			}
+		})
+
+		It("excludes default queries listed in exclude", func() {
+			dir := generator.Config.SQL[0].Queries
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{
+				{
+					Plugin: "gen-queries",
+					Out:    dir,
+					Options: sqlc.CodegenOptions{
+						Queries: sqlc.QueryOptions{Exclude: []string{"DeleteUser", "ExecDeleteUser"}},
+					},
+				},
+			}
+
+			Expect(generator.Generate()).NotTo(HaveOccurred())
+
+			for _, config := range generator.Config.SQL {
+				content, err := os.ReadFile(filepath.Join(config.Queries, "users.sql"))
+				Expect(err).NotTo(HaveOccurred())
+
+				// Other defaults remain when include is empty
+				Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
+				Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
+				Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
+
+				// Excluded defaults are gone
+				Expect(string(content)).NotTo(ContainSubstring("name: DeleteUser :one"))
+				Expect(string(content)).NotTo(ContainSubstring("name: ExecDeleteUser :exec"))
+			}
+		})
+
+		It("excludes queries even when they are included", func() {
+			dir := generator.Config.SQL[0].Queries
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{
+				{
+					Plugin: "gen-queries",
+					Out:    dir,
+					Options: sqlc.CodegenOptions{
+						Queries: sqlc.QueryOptions{
+							Include: []string{"GetUser", "DeleteUser"},
+							Exclude: []string{"DeleteUser"},
+						},
+					},
+				},
+			}
+
+			Expect(generator.Generate()).NotTo(HaveOccurred())
+
+			for _, config := range generator.Config.SQL {
+				content, err := os.ReadFile(filepath.Join(config.Queries, "users.sql"))
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
+				Expect(string(content)).NotTo(ContainSubstring("name: DeleteUser :one"))
+			}
+		})
+
 		When("the queries directory does not exist", func() {
 			It("returns an error", func() {
 				for index := range generator.Config.SQL {
@@ -180,9 +262,11 @@ var _ = Describe("Generator", func() {
 										Plugin: "gen-queries",
 										Out:    dir,
 										Options: sqlc.CodegenOptions{
-											Queries: []string{
-												"CopyUsers",
-												"ListPostsByTitle",
+											Queries: sqlc.QueryOptions{
+												Include: []string{
+													"CopyUsers",
+													"ListPostsByTitle",
+												},
 											},
 										},
 									},
@@ -193,7 +277,7 @@ var _ = Describe("Generator", func() {
 				}
 			})
 
-			It("generates opt-in queries when listed", func() {
+			It("adds the included opt-in queries to the defaults", func() {
 				Expect(generator.Generate()).NotTo(HaveOccurred())
 
 				for _, config := range generator.Config.SQL {
@@ -202,16 +286,12 @@ var _ = Describe("Generator", func() {
 					content, err := os.ReadFile(path)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Default PK CRUD queries are always present
+					// Default queries remain
 					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
-					Expect(string(content)).To(ContainSubstring("name: UpdateUser :one"))
-					Expect(string(content)).To(ContainSubstring("name: DeleteUser :one"))
-
-					// Default List queries are present
 					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
 
-					// Opt-in queries that were listed are present
+					// Included opt-in query is added
 					Expect(string(content)).To(ContainSubstring("name: CopyUsers :copyfrom"))
 				}
 
@@ -223,13 +303,13 @@ var _ = Describe("Generator", func() {
 
 					// FK-matching index list query is present by default
 					Expect(string(content)).To(ContainSubstring("name: ListPostsByUserId :many"))
-					// Non-FK index list query is present because it was opted in
+					// Non-FK index list query is added because it was included
 					Expect(string(content)).To(ContainSubstring("name: ListPostsByTitle :many"))
 				}
 			})
 
-			It("only generates default queries when queries is empty", func() {
-				generator.Config.SQL[0].Codegen[0].Options.Queries = []string{}
+			It("only generates default queries when include is empty", func() {
+				generator.Config.SQL[0].Codegen[0].Options.Queries = sqlc.QueryOptions{}
 				Expect(generator.Generate()).NotTo(HaveOccurred())
 
 				for _, config := range generator.Config.SQL {
@@ -290,7 +370,9 @@ var _ = Describe("Generator", func() {
 			})
 
 			It("handles non-existent query names gracefully", func() {
-				generator.Config.SQL[0].Codegen[0].Options.Queries = []string{"NonExistentQuery", "AnotherFakeQuery"}
+				generator.Config.SQL[0].Codegen[0].Options.Queries = sqlc.QueryOptions{
+					Include: []string{"NonExistentQuery", "AnotherFakeQuery"},
+				}
 				Expect(generator.Generate()).NotTo(HaveOccurred())
 
 				for _, config := range generator.Config.SQL {
@@ -299,22 +381,10 @@ var _ = Describe("Generator", func() {
 					content, err := os.ReadFile(path)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Default PK CRUD queries are still present
+					// Defaults are still present; unknown include names are ignored
 					Expect(string(content)).To(ContainSubstring("name: GetUser :one"))
 					Expect(string(content)).To(ContainSubstring("name: InsertUser :one"))
-
-					// Default List queries are still present
 					Expect(string(content)).To(ContainSubstring("name: ListUsers :many"))
-				}
-
-				// Verify posts.sql FK-based list queries
-				for _, config := range generator.Config.SQL {
-					path := filepath.Join(config.Queries, "posts.sql")
-					content, err := os.ReadFile(path)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(string(content)).To(ContainSubstring("name: ListPostsByUserId :many"))
-					Expect(string(content)).NotTo(ContainSubstring("name: ListPostsByTitle :many"))
 				}
 			})
 		})

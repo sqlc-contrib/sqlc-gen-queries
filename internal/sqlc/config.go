@@ -71,8 +71,17 @@ type Codegen struct {
 
 // CodegenOptions holds plugin-specific options for the gen-queries plugin.
 type CodegenOptions struct {
-	Queries []string     `yaml:"queries,omitempty"`
+	Queries QueryOptions `yaml:"queries,omitempty"`
 	Tables  TableOptions `yaml:"tables,omitempty"`
+}
+
+// QueryOptions holds query-level filtering options for the gen-queries plugin.
+// Include adds opt-in queries on top of the default query set. Exclude removes
+// queries from what would otherwise be generated and always takes precedence
+// over Include and the defaults.
+type QueryOptions struct {
+	Include []string `yaml:"include,omitempty"`
+	Exclude []string `yaml:"exclude,omitempty"`
 }
 
 // TableOptions holds table-level filtering options for the gen-queries plugin.
@@ -94,15 +103,26 @@ func (s *SQL) GetOptions() CodegenOptions {
 	return CodegenOptions{}
 }
 
-// GetQueriesSet returns a set of opt-in query names for efficient lookup.
-// The returned map allows O(1) lookup to check if a query is enabled.
-func (s *SQL) GetQueriesSet() map[string]bool {
+// GetQueryIncludeSet returns the set of opt-in query names to generate in
+// addition to the default query set.
+func (s *SQL) GetQueryIncludeSet() map[string]bool {
 	opts := s.GetOptions()
-	querySet := make(map[string]bool, len(opts.Queries))
-	for _, name := range opts.Queries {
-		querySet[name] = true
+	includeSet := make(map[string]bool, len(opts.Queries.Include))
+	for _, name := range opts.Queries.Include {
+		includeSet[name] = true
 	}
-	return querySet
+	return includeSet
+}
+
+// GetQueryExcludeSet returns the deny-list of query names to skip. Excluded
+// queries are never generated, even when they belong to the default set.
+func (s *SQL) GetQueryExcludeSet() map[string]bool {
+	opts := s.GetOptions()
+	excludeSet := make(map[string]bool, len(opts.Queries.Exclude))
+	for _, name := range opts.Queries.Exclude {
+		excludeSet[name] = true
+	}
+	return excludeSet
 }
 
 // GetIncludeSet returns the allow-list of table names for query generation.
