@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.2.4...v0.3.0) (2026-06-08)
+
+
+### Features
+
+* restructure queries config into include/exclude lists ([697f49e](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/697f49e0633251879bcdc65b48f122a5cd6430d1))
+
 ## [0.2.4](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.2.3...v0.2.4) (2026-06-08)
 
 
