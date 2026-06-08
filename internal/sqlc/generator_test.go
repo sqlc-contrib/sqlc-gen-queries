@@ -70,6 +70,49 @@ var _ = Describe("Generator", func() {
 			}
 		})
 
+		It("generates only included tables", func() {
+			dir := generator.Config.SQL[0].Queries
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{
+				{
+					Plugin: "gen-queries",
+					Out:    dir,
+					Options: sqlc.CodegenOptions{
+						Tables: sqlc.TableOptions{Include: []string{"public.users"}},
+					},
+				},
+			}
+
+			Expect(generator.Generate()).NotTo(HaveOccurred())
+
+			for _, config := range generator.Config.SQL {
+				Expect(filepath.Join(config.Queries, "users.sql")).To(BeAnExistingFile())
+				Expect(filepath.Join(config.Queries, "posts.sql")).NotTo(BeAnExistingFile())
+			}
+		})
+
+		It("excludes tables even when they are included", func() {
+			dir := generator.Config.SQL[0].Queries
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{
+				{
+					Plugin: "gen-queries",
+					Out:    dir,
+					Options: sqlc.CodegenOptions{
+						Tables: sqlc.TableOptions{
+							Include: []string{"users", "posts"},
+							Exclude: []string{"posts"},
+						},
+					},
+				},
+			}
+
+			Expect(generator.Generate()).NotTo(HaveOccurred())
+
+			for _, config := range generator.Config.SQL {
+				Expect(filepath.Join(config.Queries, "users.sql")).To(BeAnExistingFile())
+				Expect(filepath.Join(config.Queries, "posts.sql")).NotTo(BeAnExistingFile())
+			}
+		})
+
 		It("generates valid SQL content with default PK queries", func() {
 			err := generator.Generate()
 			Expect(err).NotTo(HaveOccurred())

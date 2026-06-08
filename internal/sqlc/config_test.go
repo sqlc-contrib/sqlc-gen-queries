@@ -190,4 +190,47 @@ var _ = Describe("Config", func() {
 			Expect(excludeSet["posts"]).To(BeFalse())
 		})
 	})
+
+	Describe("SQL.GetIncludeSet", func() {
+		It("returns an empty map when codegen is nil", func() {
+			sql := sqlc.SQL{}
+			includeSet := sql.GetIncludeSet()
+			Expect(includeSet).NotTo(BeNil())
+			Expect(includeSet).To(BeEmpty())
+		})
+
+		It("returns an empty map when include is empty", func() {
+			sql := sqlc.SQL{
+				Codegen: []sqlc.Codegen{
+					{
+						Plugin:  "gen-queries",
+						Out:     "out",
+						Options: sqlc.CodegenOptions{Tables: sqlc.TableOptions{Include: []string{}}},
+					},
+				},
+			}
+			includeSet := sql.GetIncludeSet()
+			Expect(includeSet).NotTo(BeNil())
+			Expect(includeSet).To(BeEmpty())
+		})
+
+		It("returns a map with included table names", func() {
+			sql := sqlc.SQL{
+				Codegen: []sqlc.Codegen{
+					{
+						Plugin: "gen-queries",
+						Out:    "out",
+						Options: sqlc.CodegenOptions{
+							Tables: sqlc.TableOptions{Include: []string{"users", "analytics.events"}},
+						},
+					},
+				},
+			}
+			includeSet := sql.GetIncludeSet()
+			Expect(includeSet).To(HaveLen(2))
+			Expect(includeSet["users"]).To(BeTrue())
+			Expect(includeSet["analytics.events"]).To(BeTrue())
+			Expect(includeSet["posts"]).To(BeFalse())
+		})
+	})
 })

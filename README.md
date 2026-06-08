@@ -60,6 +60,9 @@ sql:
         out: "ent/query"
         options:
           tables:
+            include:
+              - "users"
+              - "auth.accounts"
             exclude:
               - "audit_logs"
               - "auth.sessions"
@@ -68,9 +71,13 @@ sql:
             - "GetUserWithPost"
 ```
 
-Use `options.tables.exclude` to skip generating query files for tables that
-should not be managed by sqlc. Entries may be table names (`audit_logs`) or
-schema-qualified table names (`auth.sessions`).
+Use `options.tables` to control which tables get query files. Entries may be
+table names (`audit_logs`) or schema-qualified table names (`auth.sessions`).
+
+- `include` is an allow-list: when non-empty, only the listed tables are
+  generated. When omitted or empty, every table is generated.
+- `exclude` is a deny-list that always takes precedence over `include`, so a
+  table present in both lists is skipped.
 
 ### Default queries (always generated)
 

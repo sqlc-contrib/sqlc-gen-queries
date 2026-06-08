@@ -162,11 +162,12 @@ func (x *Generator) Generate() error {
 		}
 
 		queries := config.GetQueriesSet()
+		include := config.GetIncludeSet()
 		exclude := config.GetExcludeSet()
 
 		for _, schema := range x.Catalog.Schemas {
 			for _, table := range schema.Tables {
-				if tableExcluded(exclude, schema.Name, table.Name) {
+				if !tableSelected(include, exclude, schema.Name, table.Name) {
 					continue
 				}
 

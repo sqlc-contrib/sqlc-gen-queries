@@ -76,7 +76,10 @@ type CodegenOptions struct {
 }
 
 // TableOptions holds table-level filtering options for the gen-queries plugin.
+// Include is an allow-list: when non-empty, only the listed tables are
+// generated. Exclude is a deny-list that always takes precedence over Include.
 type TableOptions struct {
+	Include []string `yaml:"include,omitempty"`
 	Exclude []string `yaml:"exclude,omitempty"`
 }
 
@@ -102,8 +105,20 @@ func (s *SQL) GetQueriesSet() map[string]bool {
 	return querySet
 }
 
-// GetExcludeSet returns a set of table names to skip during query generation.
-// Entries may be unqualified table names or schema-qualified names.
+// GetIncludeSet returns the allow-list of table names for query generation.
+// Entries may be unqualified table names or schema-qualified names. An empty
+// set means every table is included.
+func (s *SQL) GetIncludeSet() map[string]bool {
+	opts := s.GetOptions()
+	includeSet := make(map[string]bool, len(opts.Tables.Include))
+	for _, name := range opts.Tables.Include {
+		includeSet[name] = true
+	}
+	return includeSet
+}
+
+// GetExcludeSet returns the deny-list of table names to skip during query
+// generation. Entries may be unqualified table names or schema-qualified names.
 func (s *SQL) GetExcludeSet() map[string]bool {
 	opts := s.GetOptions()
 	excludeSet := make(map[string]bool, len(opts.Tables.Exclude))
@@ -113,6 +128,17 @@ func (s *SQL) GetExcludeSet() map[string]bool {
 	return excludeSet
 }
 
-func tableExcluded(excludeSet map[string]bool, schema, table string) bool {
-	return excludeSet[table] || excludeSet[schema+"."+table]
+// tableSelected reports whether a table should have query files generated.
+// Exclude always takes precedence over include; an empty include set matches
+// every table. Both sets are checked against the unqualified table name and
+// the schema-qualified name (schema.table).
+func tableSelected(includeSet, excludeSet map[string]bool, schema, table string) bool {
+	qualified := schema + "." + table
+	if excludeSet[table] || excludeSet[qualified] {
+		return false
+	}
+	if len(includeSet) == 0 {
+		return true
+	}
+	return includeSet[table] || includeSet[qualified]
 }
