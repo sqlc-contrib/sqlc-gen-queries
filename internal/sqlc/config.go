@@ -71,8 +71,10 @@ type Codegen struct {
 
 // CodegenOptions holds plugin-specific options for the gen-queries plugin.
 type CodegenOptions struct {
-	Queries QueryOptions `yaml:"queries,omitempty"`
-	Tables  TableOptions `yaml:"tables,omitempty"`
+	Queries       QueryOptions  `yaml:"queries,omitempty"`
+	Tables        TableOptions  `yaml:"tables,omitempty"`
+	InsertColumns ColumnOptions `yaml:"insert_columns,omitempty"`
+	UpdateColumns ColumnOptions `yaml:"update_columns,omitempty"`
 }
 
 // QueryOptions holds query-level filtering options for the gen-queries plugin.
@@ -89,6 +91,11 @@ type QueryOptions struct {
 // generated. Exclude is a deny-list that always takes precedence over Include.
 type TableOptions struct {
 	Include []string `yaml:"include,omitempty"`
+	Exclude []string `yaml:"exclude,omitempty"`
+}
+
+// ColumnOptions holds column-level filtering options.
+type ColumnOptions struct {
 	Exclude []string `yaml:"exclude,omitempty"`
 }
 
@@ -148,6 +155,30 @@ func (s *SQL) GetExcludeSet() map[string]bool {
 	return excludeSet
 }
 
+// GetInsertColumnExcludeSet returns the deny-list of columns to skip in
+// generated INSERT/COPY statements. Entries may be column names, table-qualified
+// column names, or schema-qualified table column names.
+func (s *SQL) GetInsertColumnExcludeSet() map[string]bool {
+	opts := s.GetOptions()
+	excludeSet := make(map[string]bool, len(opts.InsertColumns.Exclude))
+	for _, name := range opts.InsertColumns.Exclude {
+		excludeSet[name] = true
+	}
+	return excludeSet
+}
+
+// GetUpdateColumnExcludeSet returns the deny-list of columns to skip in
+// generated UPDATE statements. Entries may be column names, table-qualified
+// column names, or schema-qualified table column names.
+func (s *SQL) GetUpdateColumnExcludeSet() map[string]bool {
+	opts := s.GetOptions()
+	excludeSet := make(map[string]bool, len(opts.UpdateColumns.Exclude))
+	for _, name := range opts.UpdateColumns.Exclude {
+		excludeSet[name] = true
+	}
+	return excludeSet
+}
+
 // tableSelected reports whether a table should have query files generated.
 // Exclude always takes precedence over include; an empty include set matches
 // every table. Both sets are checked against the unqualified table name and
@@ -161,4 +192,17 @@ func tableSelected(includeSet, excludeSet map[string]bool, schema, table string)
 		return true
 	}
 	return includeSet[table] || includeSet[qualified]
+}
+
+func columnSelected(excludeSet map[string]bool, schema, table, column string) bool {
+	if excludeSet[column] {
+		return false
+	}
+	if excludeSet[table+"."+column] {
+		return false
+	}
+	if excludeSet[schema+"."+table+"."+column] {
+		return false
+	}
+	return true
 }
