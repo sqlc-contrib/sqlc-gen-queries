@@ -10,7 +10,7 @@ tool (
 require (
 	github.com/go-openapi/inflect v1.0.0
 	github.com/onsi/ginkgo/v2 v2.32.1
-	github.com/onsi/gomega v1.42.1
+	github.com/onsi/gomega v1.43.0
 	github.com/urfave/cli/v3 v3.11.0
 	gopkg.in/yaml.v3 v3.0.1
 )
