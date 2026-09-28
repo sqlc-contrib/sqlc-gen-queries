@@ -1,6 +1,6 @@
 module github.com/sqlc-contrib/sqlc-gen-queries
 
-go 1.25.0
+go 1.26.0
 
 tool (
 	github.com/k1LoW/octocov
@@ -8,10 +8,10 @@ tool (
 )
 
 require (
-	github.com/go-openapi/inflect v1.0.0
+	github.com/go-openapi/inflect v1.0.1
 	github.com/onsi/ginkgo/v2 v2.33.0
-	github.com/onsi/gomega v1.43.1
-	github.com/urfave/cli/v3 v3.12.0
+	github.com/onsi/gomega v1.44.0
+	github.com/urfave/cli/v3 v3.13.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
