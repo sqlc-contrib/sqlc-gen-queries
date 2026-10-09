@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.3.0...v0.3.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **template:** cast the update_mask argument to text[] ([#85](https://github.com/sqlc-contrib/sqlc-gen-queries/issues/85)) ([599606c](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/599606c8ae1fbf195e42531f4d6463607dc1fdb0))
+
 ## [0.3.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.2.4...v0.3.0) (2026-06-08)
 
 
