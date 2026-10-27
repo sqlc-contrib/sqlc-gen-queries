@@ -49,6 +49,43 @@ var _ = Describe("Generator", func() {
 			}
 		})
 
+		It("does not write a generated column, which the database computes", func() {
+			generator.Catalog = &sqlc.Catalog{Schemas: []sqlc.Schema{{
+				Name: "public",
+				Tables: []sqlc.Table{{
+					Name: "items",
+					Columns: []sqlc.Column{
+						{Name: "item_id", Type: "uuid"},
+						{Name: "parent", Type: "text"},
+						{Name: "name", Type: "text", Attributes: sqlc.Attributes{Comment: "sqlc:generated"}},
+						{Name: "display_name", Type: "text"},
+					},
+					PrimaryKey: &sqlc.Index{Name: "items_pkey", Parts: []sqlc.IndexPart{{Column: "item_id"}}},
+					Indexes: []sqlc.Index{{
+						Name:   "items_name_idx",
+						Unique: true,
+						Parts:  []sqlc.IndexPart{{Column: "name"}},
+					}},
+				}},
+			}}}
+
+			Expect(generator.Generate()).NotTo(HaveOccurred())
+
+			data, err := os.ReadFile(filepath.Join(generator.Config.SQL[0].Queries, "items.sql"))
+			Expect(err).NotTo(HaveOccurred())
+			sql := string(data)
+
+			// a read still has it: SELECT * and RETURNING * carry the column
+			Expect(sql).To(ContainSubstring("RETURNING *"))
+			// no statement writes it: the INSERT lists, the UPDATE assignments and the arguments
+			Expect(sql).NotTo(ContainSubstring("sqlc.arg(name)"))
+			Expect(sql).NotTo(MatchRegexp(`(?m)^\s+name = CASE`))
+			Expect(sql).NotTo(MatchRegexp(`(?m)^\s+name,?$`))
+			// the other columns are written as before
+			Expect(sql).To(ContainSubstring("sqlc.arg(display_name)"))
+			Expect(sql).To(ContainSubstring("display_name = CASE"))
+		})
+
 		It("skips excluded tables", func() {
 			dir := generator.Config.SQL[0].Queries
 			generator.Config.SQL[0].Codegen = []sqlc.Codegen{

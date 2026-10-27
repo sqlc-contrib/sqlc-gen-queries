@@ -201,11 +201,11 @@ WHERE
 -- Returns the inserted row with all fields populated.
 -- name: {{$query_name}} :one
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 )
@@ -219,11 +219,11 @@ RETURNING *;
 -- Returns number of affected rows (should always be 1 on success).
 -- name: {{$query_name}} :exec
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
@@ -236,11 +236,11 @@ INSERT INTO {{.Table.Name}} (
 -- Executes the insert once for each provided set of values and returns inserted rows.
 -- name: {{$query_name}} :batchone
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 )
@@ -254,11 +254,11 @@ RETURNING *;
 -- Executes the insert once for each provided set of values and returns number of affected rows.
 -- name: {{$query_name}} :batchexec
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
@@ -270,11 +270,11 @@ INSERT INTO {{.Table.Name}} (
 -- This is the fastest way to insert large amounts of data. Does not return inserted rows.
 -- name: {{$query_name}} :copyfrom
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.Columns}}{{if $i}},
+{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
@@ -350,7 +350,7 @@ OFFSET
 -- name: {{$query_name}} :many
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{ range $i, $column := $.Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -373,7 +373,7 @@ RETURNING *;
 -- name: {{$query_name}} :execrows
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{ range $i, $column := $.Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -395,7 +395,7 @@ WHERE
 -- name: {{$query_name}} :batchmany
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{ range $i, $column := $.Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -418,7 +418,7 @@ RETURNING *;
 -- name: {{$query_name}} :batchexec
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.Columns}}{{if $i}},
+{{ range $i, $column := $.Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}

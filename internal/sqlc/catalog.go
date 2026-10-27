@@ -119,7 +119,33 @@ func (x *Table) GetUniqueKeys() []*Index {
 	return keys
 }
 
-// GetNonPrimaryKeyColumns retrieves all columns from the table except the primary key columns.
+// GeneratedMarker is the text a column's comment carries to mark it as computed
+// by the database, as in `COMMENT ON COLUMN item.name IS 'sqlc:generated'`.
+const GeneratedMarker = "sqlc:generated"
+
+// IsGenerated reports whether the column is computed by the database (a
+// GENERATED ALWAYS column): its comment carries [GeneratedMarker]. The database
+// refuses a value for it, so no INSERT, UPDATE, COPY or UPSERT may write it.
+func (x Column) IsGenerated() bool {
+	return strings.Contains(x.Comment, GeneratedMarker)
+}
+
+// GetWritableColumns retrieves the columns a statement may write: all of them
+// except the generated ones. SELECT and RETURNING still read every column.
+func (x *Table) GetWritableColumns() []Column {
+	var columns []Column
+
+	for _, column := range x.Columns {
+		if !column.IsGenerated() {
+			columns = append(columns, column)
+		}
+	}
+
+	return columns
+}
+
+// GetNonPrimaryKeyColumns retrieves all columns from the table except the primary key columns
+// and the generated ones, which the database computes.
 // This is useful for generating UPDATE statements where primary keys should not be modified.
 func (x *Table) GetNonPrimaryKeyColumns() []Column {
 	var columns []Column
@@ -135,6 +161,9 @@ func (x *Table) GetNonPrimaryKeyColumns() []Column {
 
 	// Add all non-primary key columns
 	for _, column := range x.Columns {
+		if column.IsGenerated() {
+			continue
+		}
 		if pkColumns == nil || !pkColumns[column.Name] {
 			columns = append(columns, column)
 		}

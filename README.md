@@ -120,6 +120,27 @@ table:
 | `BatchDelete<Tables>`     | Batch delete rows by primary key           |
 | `BatchExecDelete<Tables>` | Batch delete rows by primary key (exec)    |
 
+### Generated columns
+
+A column the database computes (`GENERATED ALWAYS AS (…) STORED`) cannot be written:
+Postgres refuses a value for it in an `INSERT` or an `UPDATE`. Mark it with the
+`sqlc:generated` marker in its comment and the generator leaves it out of every
+write (`INSERT`, `UPDATE`, `COPY`, `UPSERT` and their Exec and Batch variants),
+while `SELECT *` and `RETURNING *` still carry it:
+
+```sql
+CREATE TABLE item (
+    item_id UUID PRIMARY KEY,
+    parent  TEXT NOT NULL,
+    name    TEXT GENERATED ALWAYS AS (parent || '/items/' || item_id) STORED NOT NULL
+);
+COMMENT ON COLUMN item.name IS 'sqlc:generated';
+```
+
+Atlas's `{{ json . }}` inspection carries a column's comment into the catalog, so
+nothing else is needed. The marker may sit anywhere in a longer comment. A mistyped
+marker does nothing, and `sqlc generate` then fails on the `INSERT` Postgres refuses.
+
 ### Opt-in queries
 
 These queries are not part of the default set — they are only generated when
