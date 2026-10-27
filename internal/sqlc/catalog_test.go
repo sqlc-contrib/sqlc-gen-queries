@@ -507,4 +507,43 @@ var _ = Describe("Catalog", func() {
 			})
 		})
 	})
+
+	Describe("generated columns", func() {
+		var table *sqlc.Table
+
+		BeforeEach(func() {
+			table = &sqlc.Table{
+				Name: "items",
+				Columns: []sqlc.Column{
+					{Name: "item_id", Type: "uuid"},
+					{Name: "parent", Type: "text"},
+					{Name: "name", Type: "text", Attributes: sqlc.Attributes{Comment: "the name sqlc:generated"}},
+					{Name: "display_name", Type: "text", Attributes: sqlc.Attributes{Comment: "a plain comment"}},
+				},
+				PrimaryKey: &sqlc.Index{Name: "items_pkey", Parts: []sqlc.IndexPart{{Column: "item_id"}}},
+			}
+		})
+
+		It("tells a column whose comment carries the marker from one that does not", func() {
+			Expect(table.GetColumn("name").IsGenerated()).To(BeTrue())
+			Expect(table.GetColumn("display_name").IsGenerated()).To(BeFalse())
+			Expect(table.GetColumn("item_id").IsGenerated()).To(BeFalse())
+		})
+
+		It("leaves a generated column out of the writable ones", func() {
+			names := []string{}
+			for _, column := range table.GetWritableColumns() {
+				names = append(names, column.Name)
+			}
+			Expect(names).To(Equal([]string{"item_id", "parent", "display_name"}))
+		})
+
+		It("leaves a generated column out of the non-primary-key ones an UPDATE sets", func() {
+			names := []string{}
+			for _, column := range table.GetNonPrimaryKeyColumns() {
+				names = append(names, column.Name)
+			}
+			Expect(names).To(Equal([]string{"parent", "display_name"}))
+		})
+	})
 })
