@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.3.1...v0.4.0) (2026-10-27)
+
+
+### Features
+
+* leave a generated column out of the writes, marked by its comment ([1aa8e14](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/1aa8e147919e4aa82f58fe92b8b6310bf4ac53ae))
+
 ## [0.3.1](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.3.0...v0.3.1) (2026-10-09)
 
 
