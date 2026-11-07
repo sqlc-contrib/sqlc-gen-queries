@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.4.0...v0.5.0) (2026-11-07)
+
+
+### Features
+
+* **ci:** push the Nix build to Cachix, and merge with the App token ([#97](https://github.com/sqlc-contrib/sqlc-gen-queries/issues/97)) ([e409818](https://github.com/sqlc-contrib/sqlc-gen-queries/commit/e4098183d590e9be07a4c27b3c946843faa5d8d7))
+
 ## [0.4.0](https://github.com/sqlc-contrib/sqlc-gen-queries/compare/v0.3.1...v0.4.0) (2026-10-27)
 
 
