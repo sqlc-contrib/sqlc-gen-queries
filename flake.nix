@@ -25,7 +25,7 @@
           inherit version;
           src = pkgs.lib.cleanSource ./.;
           subPackages = [ "cmd/sqlc-gen-queries" ];
-          vendorHash = "sha256-t8yFhyd0oMLeK/AjIRzKaZXXjG0zdpJQTlPye/AcKj4=";
+          vendorHash = "sha256-UJA1ChCCUvkpHQesEc57104RZx15D6OKzqc7V1mbK+0=";
           doInstallCheck = true;
           installCheckPhase = ''
             $out/bin/sqlc-gen-queries --help
