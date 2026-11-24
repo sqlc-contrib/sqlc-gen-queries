@@ -26,7 +26,10 @@ var _ = Describe("Template", func() {
 			// Foreign key index check
 			"is_fk_index": func(args ...any) bool { return false },
 			// Query selection function
-			"should_generate": func(args ...any) bool { return false },
+			"should_generate":       func(args ...any) bool { return false },
+			"query_columns":         func(args ...any) any { return nil },
+			"query_projection":      func(args ...any) string { return "*" },
+			"query_join_projection": func(args ...any) string { return "*" },
 		}
 
 		It("opens and parses template successfully", func() {

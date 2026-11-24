@@ -3,6 +3,7 @@ package sqlc_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sqlc-contrib/sqlc-gen-queries/internal/sqlc"
 
@@ -40,6 +41,69 @@ var _ = Describe("Generator", func() {
 	})
 
 	Describe("Generate", func() {
+		It("filters columns independently for reads, inserts, and updates", func() {
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{{Plugin: sqlc.PluginName, Options: sqlc.CodegenOptions{Queries: sqlc.QueryOptions{
+				Include: []string{"GetUser", "InsertUser", "UpdateUser"},
+				ColumnFilters: []sqlc.QueryColumnOptions{
+					{Name: "GetUser", Columns: sqlc.ColumnOptions{Include: []string{"email"}}},
+					{Name: "InsertUser", Columns: sqlc.ColumnOptions{Exclude: []string{"email"}}},
+					{Name: "UpdateUser", Columns: sqlc.ColumnOptions{Exclude: []string{"email", "name"}}},
+				},
+			}}}}
+			// Filtering every eligible UPDATE column is invalid.
+			Expect(generator.Generate()).To(MatchError(ContainSubstring("empty list")))
+		})
+
+		It("filters UPDATE SET without changing its WHERE or RETURNING", func() {
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{{Plugin: sqlc.PluginName, Options: sqlc.CodegenOptions{Queries: sqlc.QueryOptions{
+				ColumnFilters: []sqlc.QueryColumnOptions{{Name: "UpdateUser", Columns: sqlc.ColumnOptions{Include: []string{"email", "name"}, Exclude: []string{"email"}}}},
+			}}}}
+			Expect(generator.Generate()).To(Succeed())
+			content, err := os.ReadFile(filepath.Join(generator.Config.SQL[0].Queries, "users.sql"))
+			Expect(err).NotTo(HaveOccurred())
+			query := strings.Split(strings.Split(string(content), "-- name: UpdateUser :one")[1], "-- name:")[0]
+			Expect(query).To(ContainSubstring("name = CASE"))
+			Expect(query).NotTo(ContainSubstring("email = CASE"))
+			Expect(query).To(ContainSubstring("id = sqlc.arg(id)"))
+			Expect(query).To(ContainSubstring("RETURNING name"))
+		})
+
+		It("filters read projections and insert inputs", func() {
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{{Plugin: sqlc.PluginName, Options: sqlc.CodegenOptions{Queries: sqlc.QueryOptions{
+				ColumnFilters: []sqlc.QueryColumnOptions{
+					{Name: "GetUser", Columns: sqlc.ColumnOptions{Include: []string{"email"}}},
+					{Name: "InsertUser", Columns: sqlc.ColumnOptions{Exclude: []string{"email"}}},
+				},
+			}}}}
+			Expect(generator.Generate()).To(Succeed())
+			content, err := os.ReadFile(filepath.Join(generator.Config.SQL[0].Queries, "users.sql"))
+			Expect(err).NotTo(HaveOccurred())
+			sql := string(content)
+			Expect(sql).To(ContainSubstring("-- name: GetUser :one\nSELECT\n    email"))
+			Expect(sql).To(ContainSubstring("-- name: InsertUser :one\nINSERT INTO users (\n    id"))
+			Expect(sql).To(ContainSubstring("-- name: InsertUser :one\nINSERT INTO users (\n    id,\n    name\n) VALUES (\n    sqlc.arg(id),\n    sqlc.narg(name)"))
+		})
+
+		It("rejects unknown columns", func() {
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{{Plugin: sqlc.PluginName, Options: sqlc.CodegenOptions{Queries: sqlc.QueryOptions{
+				ColumnFilters: []sqlc.QueryColumnOptions{{Name: "GetUser", Columns: sqlc.ColumnOptions{Exclude: []string{"missing"}}}},
+			}}}}
+			Expect(generator.Generate()).To(MatchError(ContainSubstring("unknown column missing")))
+		})
+
+		It("rejects filters on queries without column lists", func() {
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{{Plugin: sqlc.PluginName, Options: sqlc.CodegenOptions{Queries: sqlc.QueryOptions{
+				ColumnFilters: []sqlc.QueryColumnOptions{{Name: "ExecDeleteUser", Columns: sqlc.ColumnOptions{Exclude: []string{"email"}}}},
+			}}}}
+			Expect(generator.Generate()).To(MatchError(ContainSubstring("no filterable columns")))
+		})
+
+		It("rejects unknown query filters", func() {
+			generator.Config.SQL[0].Codegen = []sqlc.Codegen{{Plugin: sqlc.PluginName, Options: sqlc.CodegenOptions{Queries: sqlc.QueryOptions{
+				ColumnFilters: []sqlc.QueryColumnOptions{{Name: "MissingQuery", Columns: sqlc.ColumnOptions{Exclude: []string{"email"}}}},
+			}}}}
+			Expect(generator.Generate()).To(MatchError(ContainSubstring("was not generated")))
+		})
 		It("generates SQL query files for all tables", func() {
 			Expect(generator.Generate()).NotTo(HaveOccurred())
 

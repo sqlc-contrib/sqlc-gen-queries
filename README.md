@@ -95,6 +95,36 @@ are query names (e.g. `GetUser`, `ListPostsByTitle`).
 > list form (`queries: ["CopyUsers"]`) is no longer supported — move those
 > entries under `queries.include`.
 
+### Per-query columns
+
+An entry in `options.queries.include` can also be an object with `name` and
+`columns.include` and/or `columns.exclude`:
+
+```yaml
+options:
+  queries:
+    include:
+      - name: GetUser
+        columns:
+          include: [id, email]
+      - name: InsertUser
+        columns:
+          exclude: [created_at]
+      - name: UpdateUser
+        columns:
+          exclude: [tenant_id]
+```
+
+Filters apply independently to each named query: read projections and
+`RETURNING` results, INSERT/COPY inputs and values, or UPDATE `SET` columns.
+`exclude` wins over `include`; without either filter, output is unchanged.
+Predicate, join, and ordering columns are never removed. Joined-table results
+remain intact; filters name columns of the query's primary table only. For
+queries with the same name on multiple tables, specify `table: schema.table`
+(or `table: table` when unambiguous) in the object. Unknown names/columns,
+ambiguous names, and filters that leave no SQL columns cause generation errors.
+Query-level `queries.exclude` continues to remove entire queries.
+
 ### Default queries (always generated)
 
 Primary key CRUD operations, List queries (including FK-index-based list

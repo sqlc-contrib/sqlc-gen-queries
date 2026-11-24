@@ -5,6 +5,7 @@
 package sqlc
 
 import (
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -79,9 +80,55 @@ type CodegenOptions struct {
 // Include adds opt-in queries on top of the default query set. Exclude removes
 // queries from what would otherwise be generated and always takes precedence
 // over Include and the defaults.
-type QueryOptions struct {
+type ColumnOptions struct {
 	Include []string `yaml:"include,omitempty"`
 	Exclude []string `yaml:"exclude,omitempty"`
+}
+
+type QueryColumnOptions struct {
+	Name    string        `yaml:"name"`
+	Table   string        `yaml:"table,omitempty"`
+	Columns ColumnOptions `yaml:"columns"`
+}
+
+type QueryOptions struct {
+	Include       []string             `yaml:"-"`
+	Exclude       []string             `yaml:"exclude,omitempty"`
+	ColumnFilters []QueryColumnOptions `yaml:"-"`
+}
+
+func (q *QueryOptions) UnmarshalYAML(node *yaml.Node) error {
+	var raw struct {
+		Include []yaml.Node `yaml:"include"`
+		Exclude []string    `yaml:"exclude"`
+	}
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	q.Exclude = raw.Exclude
+	for _, entry := range raw.Include {
+		switch entry.Kind {
+		case yaml.ScalarNode:
+			var name string
+			if err := entry.Decode(&name); err != nil {
+				return err
+			}
+			q.Include = append(q.Include, name)
+		case yaml.MappingNode:
+			var filter QueryColumnOptions
+			if err := entry.Decode(&filter); err != nil {
+				return err
+			}
+			if filter.Name == "" {
+				return fmt.Errorf("query column filter requires a name")
+			}
+			q.Include = append(q.Include, filter.Name)
+			q.ColumnFilters = append(q.ColumnFilters, filter)
+		default:
+			return fmt.Errorf("query include entry must be a name or mapping")
+		}
+	}
+	return nil
 }
 
 // TableOptions holds table-level filtering options for the gen-queries plugin.

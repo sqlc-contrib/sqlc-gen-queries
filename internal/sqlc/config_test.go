@@ -1,6 +1,9 @@
 package sqlc_test
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/sqlc-contrib/sqlc-gen-queries/internal/sqlc"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -82,6 +85,19 @@ var _ = Describe("Config", func() {
 			Expect(opts.Queries.Include).To(HaveLen(2))
 			Expect(opts.Queries.Include).To(ContainElements("ListUsers", "CopyUsers"))
 			Expect(opts.Tables.Exclude).To(ContainElement("audit_logs"))
+		})
+	})
+
+	Describe("Query column config", func() {
+		It("loads scalar and mapping query entries", func() {
+			path := filepath.Join(GinkgoT().TempDir(), "sqlc.yaml")
+			Expect(os.WriteFile(path, []byte("sql:\n  - codegen:\n      - plugin: gen-queries\n        options:\n          queries:\n            include:\n              - ListUsers\n              - name: InsertUser\n                columns:\n                  include: [id, email]\n                  exclude: [email]\n            exclude: [DeleteUser]\n"), 0600)).To(Succeed())
+			cfg, err := sqlc.LoadConfig(path)
+			Expect(err).NotTo(HaveOccurred())
+			options := cfg.SQL[0].GetOptions().Queries
+			Expect(options.Include).To(Equal([]string{"ListUsers", "InsertUser"}))
+			Expect(options.Exclude).To(Equal([]string{"DeleteUser"}))
+			Expect(options.ColumnFilters).To(Equal([]sqlc.QueryColumnOptions{{Name: "InsertUser", Columns: sqlc.ColumnOptions{Include: []string{"id", "email"}, Exclude: []string{"email"}}}}))
 		})
 	})
 
