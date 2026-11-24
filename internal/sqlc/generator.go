@@ -35,6 +35,45 @@ func (x *Generator) Generate() error {
 		Table        *Table
 		QueryInclude map[string]bool
 		QueryExclude map[string]bool
+		Filters      map[string]ColumnOptions
+		Used         map[string]bool
+		Seen         map[string]bool
+	}
+
+	queryColumns := func(ctx Context, name string, columns []Column) ([]Column, error) {
+		filter, ok := ctx.Filters[name]
+		if !ok {
+			return columns, nil
+		}
+		ctx.Used[name] = true
+		include := make(map[string]bool)
+		exclude := make(map[string]bool)
+		for _, col := range filter.Include {
+			include[col] = true
+		}
+		for _, col := range filter.Exclude {
+			exclude[col] = true
+		}
+		for col := range include {
+			if ctx.Table.GetColumn(col) == nil {
+				return nil, fmt.Errorf("query %s: unknown column %s", name, col)
+			}
+		}
+		for col := range exclude {
+			if ctx.Table.GetColumn(col) == nil {
+				return nil, fmt.Errorf("query %s: unknown column %s", name, col)
+			}
+		}
+		var result []Column
+		for _, col := range columns {
+			if (len(include) == 0 || include[col.Name]) && !exclude[col.Name] {
+				result = append(result, col)
+			}
+		}
+		if len(result) == 0 {
+			return nil, fmt.Errorf("query %s: column filter leaves an empty list", name)
+		}
+		return result, nil
 	}
 
 	opts := map[string]any{
@@ -151,7 +190,41 @@ func (x *Generator) Generate() error {
 			if ctx.QueryExclude[queryName] {
 				return false
 			}
-			return isDefault || ctx.QueryInclude[queryName]
+			selected := isDefault || ctx.QueryInclude[queryName]
+			if selected {
+				ctx.Seen[queryName] = true
+			}
+			return selected
+		},
+		"query_columns": queryColumns,
+		"query_projection": func(ctx Context, name string) (string, error) {
+			if _, ok := ctx.Filters[name]; !ok {
+				return "*", nil
+			}
+			cols, err := queryColumns(ctx, name, ctx.Table.Columns)
+			if err != nil {
+				return "", err
+			}
+			var names []string
+			for _, col := range cols {
+				names = append(names, col.Name)
+			}
+			return strings.Join(names, ", "), nil
+		},
+		"has_filter": func(ctx Context, name string) bool { _, ok := ctx.Filters[name]; return ok },
+		"query_join_projection": func(ctx Context, name, joined string) (string, error) {
+			if _, ok := ctx.Filters[name]; !ok {
+				return fmt.Sprintf("sqlc.embed(%s), sqlc.embed(%s)", ctx.Table.Name, joined), nil
+			}
+			cols, err := queryColumns(ctx, name, ctx.Table.Columns)
+			if err != nil {
+				return "", err
+			}
+			var names []string
+			for _, col := range cols {
+				names = append(names, ctx.Table.Name+"."+col.Name)
+			}
+			return strings.Join(names, ", ") + ", sqlc.embed(" + joined + ")", nil
 		},
 	}
 
@@ -170,6 +243,18 @@ func (x *Generator) Generate() error {
 		queryExclude := config.GetQueryExcludeSet()
 		include := config.GetIncludeSet()
 		exclude := config.GetExcludeSet()
+		filters := config.GetOptions().Queries.ColumnFilters
+		matches := make([]int, len(filters))
+		for i, filter := range filters {
+			if queryExclude[filter.Name] {
+				return fmt.Errorf("query %s is excluded", filter.Name)
+			}
+			for j := 0; j < i; j++ {
+				if filters[j].Name == filter.Name && filters[j].Table == filter.Table {
+					return fmt.Errorf("duplicate column filter for query %s", filter.Name)
+				}
+			}
+		}
 
 		for _, schema := range x.Catalog.Schemas {
 			for _, table := range schema.Tables {
@@ -187,7 +272,21 @@ func (x *Generator) Generate() error {
 				//nolint:all
 				defer file.Close()
 
+				selectedFilters := make(map[string]ColumnOptions)
+				selectedIndices := make(map[string]int)
+				for i, filter := range filters {
+					if filter.Table == "" || filter.Table == table.Name || filter.Table == schema.Name+"."+table.Name {
+						if _, exists := selectedFilters[filter.Name]; exists {
+							return fmt.Errorf("query %s has conflicting column filters for table %s", filter.Name, table.Name)
+						}
+						selectedFilters[filter.Name] = filter.Columns
+						selectedIndices[filter.Name] = i
+					}
+				}
 				ctx := Context{
+					Filters:      selectedFilters,
+					Used:         make(map[string]bool),
+					Seen:         make(map[string]bool),
 					Engine:       config.Engine,
 					Schema:       schema.Name,
 					Table:        &table,
@@ -200,10 +299,31 @@ func (x *Generator) Generate() error {
 					return err
 				}
 
+				for name, i := range selectedIndices {
+					if ctx.Seen[name] {
+						for _, column := range append(append([]string{}, filters[i].Columns.Include...), filters[i].Columns.Exclude...) {
+							if table.GetColumn(column) == nil {
+								return fmt.Errorf("query %s: unknown column %s on table %s", name, column, table.Name)
+							}
+						}
+						matches[i]++
+					}
+					if ctx.Seen[name] && !ctx.Used[name] {
+						return fmt.Errorf("query %s has no filterable columns", name)
+					}
+				}
 				data := blank.ReplaceAll(buffer.Bytes(), []byte("\n\n"))
 				if _, err := file.Write(data); err != nil {
 					return err
 				}
+			}
+		}
+		for i, filter := range filters {
+			if matches[i] == 0 {
+				return fmt.Errorf("query %s was not generated", filter.Name)
+			}
+			if matches[i] > 1 {
+				return fmt.Errorf("query %s matches multiple tables; specify table", filter.Name)
 			}
 		}
 	}

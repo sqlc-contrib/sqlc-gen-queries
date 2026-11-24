@@ -11,7 +11,7 @@ SET search_path TO {{.Schema}};
 -- Returns the row or an error if not found.
 -- name: {{$query_name}} :one
 SELECT
-    *
+    {{query_projection $ $query_name}}
 FROM
     {{$.Table.Name}}
 WHERE
@@ -26,7 +26,7 @@ WHERE
 -- The result is a struct with both tables table_embedded.
 -- name: {{$query_name}} :one
 SELECT
-    {{table_embed $.Table.Name}}, {{table_embed $fk.References.Table}}
+    {{query_join_projection $ $query_name $fk.References.Table}}
 FROM
     {{$.Table.Name}}
 {{table_join $.Table $fk}}
@@ -43,7 +43,7 @@ WHERE
 -- Executes the query once for each provided key value and returns individual results.
 -- name: {{$query_name}} :batchone
 SELECT
-    *
+    {{query_projection $ $query_name}}
 FROM
     {{$.Table.Name}}
 WHERE
@@ -58,7 +58,7 @@ WHERE
 -- The result is a struct with both tables table_embedded for each row.
 -- name: {{$query_name}} :batchone
 SELECT
-    {{table_embed $.Table.Name}}, {{table_embed $fk.References.Table}}
+    {{query_join_projection $ $query_name $fk.References.Table}}
 FROM
     {{$.Table.Name}}
 {{table_join $.Table $fk}}
@@ -76,7 +76,7 @@ WHERE
 -- name: {{$query_name}} :one
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -85,7 +85,7 @@ SET
 {{- end}}
 WHERE
     {{query_condition $.Table $key}}
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "ExecUpdate%s%s" (table_name $.Table.Name "one") (query_index $key)}}
@@ -96,7 +96,7 @@ RETURNING *;
 -- name: {{$query_name}} :exec
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -115,7 +115,7 @@ WHERE
 -- name: {{$query_name}} :batchone
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -124,7 +124,7 @@ SET
 {{- end}}
 WHERE
     {{query_condition $.Table $key}}
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "BatchExecUpdate%s%s" (table_name $.Table.Name "many") (query_index $key)}}
@@ -135,7 +135,7 @@ RETURNING *;
 -- name: {{$query_name}} :batchexec
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name $.Table.GetNonPrimaryKeyColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -155,7 +155,7 @@ WHERE
 DELETE FROM {{$.Table.Name}}
 WHERE
     {{query_condition $.Table $key}}
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "ExecDelete%s%s" (table_name $.Table.Name "one") (query_index $key)}}
@@ -178,7 +178,7 @@ WHERE
 DELETE FROM {{$.Table.Name}}
 WHERE
     {{query_condition $.Table $key}}
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "BatchExecDelete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
@@ -201,15 +201,15 @@ WHERE
 -- Returns the inserted row with all fields populated.
 -- name: {{$query_name}} :one
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 )
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "ExecInsert%s" (table_name .Table.Name "one")}}
@@ -219,11 +219,11 @@ RETURNING *;
 -- Returns number of affected rows (should always be 1 on success).
 -- name: {{$query_name}} :exec
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
@@ -236,15 +236,15 @@ INSERT INTO {{.Table.Name}} (
 -- Executes the insert once for each provided set of values and returns inserted rows.
 -- name: {{$query_name}} :batchone
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 )
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "BatchExecInsert%s" (table_name .Table.Name "many")}}
@@ -254,11 +254,11 @@ RETURNING *;
 -- Executes the insert once for each provided set of values and returns number of affected rows.
 -- name: {{$query_name}} :batchexec
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
@@ -270,11 +270,11 @@ INSERT INTO {{.Table.Name}} (
 -- This is the fastest way to insert large amounts of data. Does not return inserted rows.
 -- name: {{$query_name}} :copyfrom
 INSERT INTO {{.Table.Name}} (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}}
 {{- end}}
 ) VALUES (
-{{ range $i, $column := .Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name .Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{query_argument $column}}
 {{- end}}
 );
@@ -294,7 +294,7 @@ INSERT INTO {{.Table.Name}} (
 --   Use offset + limit for traditional page number pagination.
 -- name: {{$query_name}} :many
 SELECT
-    *
+    {{query_projection $ $query_name}}
 FROM
     {{$.Table.Name}}
 WHERE
@@ -325,7 +325,7 @@ OFFSET
 --   Use offset + limit for traditional page number pagination.
 -- name: {{$query_name}} :many
 SELECT
-    *
+    {{query_projection $ $query_name}}
 FROM
     {{$.Table.Name}}
 {{- $condition := query_condition $.Table $key}}
@@ -350,7 +350,7 @@ OFFSET
 -- name: {{$query_name}} :many
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name $.Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -362,7 +362,7 @@ SET
 WHERE
     {{$condition}}
 {{- end}}
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "ExecUpdate%s%s" (table_name $.Table.Name "many") (query_index $key)}}
@@ -373,7 +373,7 @@ RETURNING *;
 -- name: {{$query_name}} :execrows
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name $.Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -395,7 +395,7 @@ WHERE
 -- name: {{$query_name}} :batchmany
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name $.Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -407,7 +407,7 @@ SET
 WHERE
     {{$condition}}
 {{- end}}
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "BatchExecUpdate%s%s" (table_name $.Table.Name "many") (query_index $key)}}
@@ -418,7 +418,7 @@ RETURNING *;
 -- name: {{$query_name}} :batchexec
 UPDATE {{$.Table.Name}}
 SET
-{{ range $i, $column := $.Table.GetWritableColumns}}{{if $i}},
+{{ range $i, $column := query_columns $ $query_name $.Table.GetWritableColumns}}{{if $i}},
 {{end}}    {{$column.Name}} = CASE
         WHEN '{{$column.Name}}' = any(sqlc.arg(update_mask)::text[])
             THEN {{query_argument $column}}
@@ -444,7 +444,7 @@ DELETE FROM {{$.Table.Name}}
 WHERE
     {{$condition}}
 {{- end}}
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "ExecDelete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
@@ -473,7 +473,7 @@ DELETE FROM {{$.Table.Name}}
 WHERE
     {{$condition}}
 {{- end}}
-RETURNING *;
+RETURNING {{query_projection $ $query_name}};
 {{- end}}
 
 {{- $query_name := printf "BatchExecDelete%s%s" (table_name $.Table.Name "many") (query_index $key)}}
